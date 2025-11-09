@@ -1,4 +1,4 @@
-%include "00_setup.sas";
+%include "../sas/00_setup.sas";
 
 /* 30_adam_adsl.sas: create ADaM-style ADSL from SDTM.DM using spec */
 
