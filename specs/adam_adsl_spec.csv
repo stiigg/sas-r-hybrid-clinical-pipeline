@@ -1,0 +1,9 @@
+source_domain,source_var,target_var,comment
+DM,USUBJID,USUBJID,Unique Subject ID
+DM,SUBJID,SUBJID,Subject ID
+DM,SEX,SEX,Sex
+DM,AGE,AGE,Age
+DM,ARMCD,TRT01P,Treatment (planned)
+DM,ARM,TRT01A,Treatment (actual)
+DM,COUNTRY,COUNTRY,Country
+DERIVED,1,SAFFL,All subjects in safety set

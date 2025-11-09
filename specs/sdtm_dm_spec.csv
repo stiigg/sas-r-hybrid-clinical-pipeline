@@ -1,0 +1,8 @@
+source_var,target_var,target_domain,comment
+USUBJID,USUBJID,DM,Unique Subject Identifier
+SUBJID,SUBJID,DM,Subject Identifier
+SEX,SEX,DM,Sex
+AGE,AGE,DM,Age at baseline
+ARMCD,ARMCD,DM,Treatment Arm Code
+ARM,ARM,DM,Treatment Arm
+COUNTRY,COUNTRY,DM,Country
