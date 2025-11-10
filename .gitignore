@@ -1,0 +1,26 @@
+# R and RStudio artefacts
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+*.Rproj
+
+# R package infrastructure
+.Rbuildignore
+.Rproj
+/renv/
+renv.lock
+
+# Generated outputs and logs
+r/tlf/output/*
+!r/tlf/output/.gitkeep
+logs/*
+!logs/.gitkeep
+
+# Data placeholders (adjust if synthetic data should be tracked)
+data/
+adam/
+
+# IDE settings
+.vscode/
+.idea/
