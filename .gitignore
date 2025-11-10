@@ -11,15 +11,20 @@
 /renv/
 
 # Generated outputs and logs
-r/tlf/output/*
-!r/tlf/output/.gitkeep
-!r/tlf/output/manifest.csv
+outputs/tlf/r/output/*
+!outputs/tlf/r/output/.gitkeep
+!outputs/tlf/r/output/manifest.csv
+outputs/qc/*
+!outputs/qc/.gitkeep
 logs/*
 !logs/.gitkeep
 
 # Data placeholders (adjust if synthetic data should be tracked)
-data/
-adam/
+data/raw/*
+data/sdtm/*
+data/adam/*
+!data/README.md
+!data/raw/source_raw_subjects_example.csv
 
 # IDE settings
 .vscode/
