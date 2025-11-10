@@ -1,0 +1,7 @@
+key,value
+raw_data_dir,data/raw
+sdtm_data_dir,data/sdtm
+adam_data_dir,data/adam
+output_data_dir,outputs
+spec_dir,specs
+log_dir,logs
