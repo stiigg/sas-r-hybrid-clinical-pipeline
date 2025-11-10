@@ -1,0 +1,19 @@
+paths:
+  adam: "data/adam"
+  tlf_out_r: "outputs/tlf/r"
+  tlf_out_sas: "outputs/tlf/sas"
+  qc_reports: "outputs/qc/reports"
+  logs: "logs/tlf"
+
+options:
+  default_population: "FAS"
+  default_qc_tolerance: 1e-6
+  archive_outputs: true
+
+shells:
+  - id: "T14.1.1"
+    name: "Demographics"
+    gen_script: "gen_tlf_t14_1_1_demog.R"
+    qc_script: "qc_tlf_t14_1_1_demog.R"
+    out_file: "tlf_t14_1_1_demog.rtf"
+# Extend as more TLFs/QC scripts are added
