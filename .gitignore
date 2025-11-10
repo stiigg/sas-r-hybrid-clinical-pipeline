@@ -9,11 +9,11 @@
 .Rbuildignore
 .Rproj
 /renv/
-renv.lock
 
 # Generated outputs and logs
 r/tlf/output/*
 !r/tlf/output/.gitkeep
+!r/tlf/output/manifest.csv
 logs/*
 !logs/.gitkeep
 
