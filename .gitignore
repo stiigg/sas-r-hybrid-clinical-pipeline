@@ -16,6 +16,8 @@ outputs/tlf/r/output/*
 !outputs/tlf/r/output/manifest.csv
 outputs/qc/*
 !outputs/qc/.gitkeep
+qc/reports/*
+!qc/reports/.gitkeep
 logs/*
 !logs/.gitkeep
 
