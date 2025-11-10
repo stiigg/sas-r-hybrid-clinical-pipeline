@@ -1,4 +1,4 @@
 task_id,runner,language,script,description
-tlf_qc,tlf_batch,R,automation/r/tlf/batch/batch_run_qc_all_tlfs.R,Run QC scripts for every TLF defined in the shell map
+tlf_qc,tlf_batch,R,qc/r/tlf/run_tlf_qc_batch.R,Run QC scripts for every TLF defined in the shell map
 adam_adsl_qc,rscript,R,qc/r/adam/qc_adsl.R,Validate ADaM ADSL variables against the specification
 validation_suite,rscript,R,validation/run_cdisc_validation.R,Run CDISC/ADaM compliance checks when tooling is available

@@ -1,0 +1,39 @@
+name: QC and Automation CI
+
+on:
+  push:
+    branches: ["main", "master", "develop", "dev"]
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - name: Install dependencies
+        run: |
+          Rscript -e "install.packages(c('yaml'), repos = 'https://cloud.r-project.org')"
+        continue-on-error: true
+
+      - name: Run repository tests
+        run: Rscript tests/run_tests.R
+
+      - name: QC dry-run smoke test
+        env:
+          QC_DRY_RUN: "true"
+        run: Rscript qc/run_qc.R
+
+      - name: Upload QC reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qc-reports
+          path: qc/reports/
+          if-no-files-found: ignore

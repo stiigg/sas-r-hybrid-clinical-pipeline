@@ -16,7 +16,6 @@ source("etl/run_etl.R")
 source("qc/run_qc.R")
 source("outputs/tlf/r/utils/load_config.R")
 source("outputs/tlf/r/utils/tlf_logging.R")
-source("automation/r/tlf/batch/batch_run_qc_all_tlfs.R")
 source("automation/r/tlf/batch/batch_run_all_tlfs.R")
 
 parse_bool <- function(env_var, default = TRUE) {
