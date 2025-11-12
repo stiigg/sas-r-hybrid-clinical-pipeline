@@ -1,3 +1,7 @@
+%include "sas/include/check_manifest.sas";
+%include "sas/include/logcheck.sas";
+%include "sas/include/check_syscc.sas";
+
 %include "00_setup.sas";
 
 /* 20_sdtm_dm.sas: create SDTM-style DM from RAW.SUBJECTS_CLEAN based on spec */
@@ -11,6 +15,7 @@ proc import datafile="%spec_file(sdtm_dm_spec.csv)"
     replace;
     guessingrows=max;
 run;
+%check_syscc(step=SDTM DM - spec import);
 
 /* Build macro variables for mapping */
 proc sql noprint;
@@ -19,6 +24,7 @@ proc sql noprint;
     from work.sdtm_dm_spec;
     %let nmap = &sqlobs;
 quit;
+%check_syscc(step=SDTM DM - mapping query);
 
 data sdtm.dm;
     set raw.subjects_clean;
@@ -33,5 +39,14 @@ data sdtm.dm;
     STUDYID = "&studyid";
     DOMAIN  = "DM";
 run;
+%check_syscc(step=SDTM DM - domain build);
 
 %logmsg(END: SDTM DM);
+
+%if %sysfunc(fileexist(%superq(ETL_LOG_PATH))) %then %do;
+  %logcheck(%superq(ETL_LOG_PATH));
+%end;
+%else %do;
+  %put [ERROR] Expected log file %superq(ETL_LOG_PATH) not found.;
+  %abort cancel;
+%end;

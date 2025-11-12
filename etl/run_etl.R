@@ -45,7 +45,13 @@ run_etl_step <- function(step, dry_run = TRUE, env = parent.frame()) {
 
   if (language %in% c("sas", "sasmacro")) {
     sas_bin <- Sys.which("sas")
-    command <- sprintf("%s -sysin %s", sas_bin, shQuote(script))
+    log_path <- file.path("logs", sprintf("%s.log", tools::file_path_sans_ext(basename(script))))
+    log_path_full <- normalizePath(log_path, winslash = "/", mustWork = FALSE)
+    if (!dir.exists(dirname(log_path_full))) {
+      dir.create(dirname(log_path_full), recursive = TRUE, showWarnings = FALSE)
+    }
+    sas_args <- c("-sysin", script, "-log", log_path_full, "-set", "ETL_LOG", log_path_full)
+    command <- sprintf("%s %s", shQuote(sas_bin), paste(shQuote(sas_args), collapse = " "))
     if (dry_run || !nzchar(sas_bin)) {
       status <- if (dry_run) "dry_run" else "sas_missing"
       if (!nzchar(sas_bin) && !dry_run) {
@@ -54,7 +60,7 @@ run_etl_step <- function(step, dry_run = TRUE, env = parent.frame()) {
         message <- "Dry run - no execution"
       }
     } else {
-      exit_code <- system2(sas_bin, c("-sysin", script))
+      exit_code <- system2(sas_bin, sas_args)
       status <- if (identical(exit_code, 0L)) "success" else "error"
       message <- if (identical(exit_code, 0L)) "" else sprintf("Exited with code %s", exit_code)
     }

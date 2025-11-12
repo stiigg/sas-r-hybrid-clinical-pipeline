@@ -9,22 +9,54 @@
 source("outputs/tlf/r/utils/load_config.R")
 source("qc/r/tlf/run_tlf_qc_batch.R")
 
+if (!requireNamespace("jsonlite", quietly = TRUE)) {
+  stop("Package 'jsonlite' is required for QC reporting.")
+}
+
 read_qc_manifest <- function(path = "specs/qc_manifest.csv") {
   if (!file.exists(path)) {
     stop(sprintf("QC manifest not found at %s", path), call. = FALSE)
   }
   manifest <- utils::read.csv(path, stringsAsFactors = FALSE)
-  expected <- c("task_id", "runner", "language", "script", "description")
-  missing <- setdiff(expected, names(manifest))
+  required_cols <- c("task_id", "runner", "language", "script", "description")
+  missing <- setdiff(required_cols, names(manifest))
   if (length(missing) > 0) {
     stop(
       sprintf(
-        "QC manifest missing required columns: %s",
+        "QC manifest missing required column(s): %s",
         paste(missing, collapse = ", ")
       ),
       call. = FALSE
     )
   }
+
+  for (i in seq_len(nrow(manifest))) {
+    row <- manifest[i, , drop = FALSE]
+
+    if (any(is.na(row[required_cols]) | row[required_cols] == "")) {
+      stop(
+        sprintf(
+          "QC manifest row %d (task_id=%s) has empty required field(s).",
+          i,
+          row$task_id
+        ),
+        call. = FALSE
+      )
+    }
+
+    if (!file.exists(row$script)) {
+      stop(
+        sprintf(
+          "QC script '%s' missing for task_id=%s (row %d).",
+          row$script,
+          row$task_id,
+          i
+        ),
+        call. = FALSE
+      )
+    }
+  }
+
   manifest
 }
 
@@ -118,6 +150,18 @@ run_qc_plan <- function(manifest_path = "specs/qc_manifest.csv", dry_run = TRUE,
     stringsAsFactors = FALSE
   )
   summary$details <- I(lapply(records, `[[`, "details"))
+
+  if (!dir.exists("qc/reports")) {
+    dir.create("qc/reports", recursive = TRUE, showWarnings = FALSE)
+  }
+  summary$timestamp <- format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z")
+  summary$user <- Sys.info()[["user"]]
+  jsonlite::write_json(
+    summary,
+    "qc/reports/qc_summary_latest.json",
+    pretty = TRUE,
+    auto_unbox = TRUE
+  )
   summary
 }
 
@@ -204,6 +248,24 @@ write_qc_reports <- function(summary, output_dir = "qc/reports") {
   invisible(list(html = html_path, text = text_path, validation = validation_flag))
 }
 
+qc_log_postmortem <- function(qc_log_path = "logs/qc.log") {
+  if (!file.exists(qc_log_path)) {
+    stop(sprintf("QC log '%s' not found – cannot verify QC status.", qc_log_path))
+  }
+
+  qc_log <- readLines(qc_log_path, warn = FALSE)
+
+  flagged <- grep("ERROR|WARNING|UNRESOLVED MACRO", qc_log, value = TRUE, ignore.case = TRUE)
+
+  if (length(flagged) > 0) {
+    message("QC issues found in log:\n", paste(flagged, collapse = "\n"))
+    stop("QC phase failed: see logs/qc.log for details.")
+  }
+
+  message("QC log clean: no ERROR/WARNING/UNRESOLVED MACRO found.")
+  invisible(TRUE)
+}
+
 `%||%` <- function(x, y) {
   if (is.null(x) || length(x) == 0) y else x
 }
@@ -219,6 +281,11 @@ if (identical(environment(), globalenv()) && !interactive()) {
   }
   summary <- run_qc_plan(manifest_path = manifest_path, dry_run = dry_run, config = config)
   reports <- write_qc_reports(summary)
+  if (!dry_run) {
+    qc_log_postmortem()
+  } else {
+    message("QC log check skipped: dry run mode.")
+  }
   print(summary[, setdiff(names(summary), "details"), drop = FALSE])
   message(sprintf("QC summary written to %s", reports$html))
 }
