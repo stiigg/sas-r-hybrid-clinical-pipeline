@@ -5,16 +5,42 @@ repository has been reorganised around modern metadata-driven practices so that
 SDTM/ADaM transformations, QC, and output generation can be orchestrated from a
 single manifest-driven entry point.
 
-## Quick start
+## Quick Start: One-Command Run
+
+The pipeline is designed to be runnable on a fresh machine with only R installed.
 
 ```bash
 git clone https://github.com/stiigg/sas-r-hybrid-clinical-pipeline.git
 cd sas-r-hybrid-clinical-pipeline
-Rscript run_all.R    # defaults to metadata-driven dry-run mode
+./run_pipeline.sh
 ```
 
-Override the default dry-run behaviour by exporting `ETL_DRY_RUN=false`,
-`QC_DRY_RUN=false`, or `TLF_DRY_RUN=false` before invoking the orchestrator.
+This will:
+
+* Auto-install required R packages from CRAN if they are missing.
+* Run the pipeline in **safe dry-run mode** by default:
+
+  * `ETL_DRY_RUN=true` – skip SAS ETL, validate metadata/wiring only.
+  * `QC_DRY_RUN=true` – skip heavy QC.
+  * `TLF_DRY_RUN=true` – skip full TLF generation.
+
+To run the **full pipeline**, including SAS-based ETL and full QC/TLFs:
+
+```bash
+ETL_DRY_RUN=false QC_DRY_RUN=false TLF_DRY_RUN=false ./run_pipeline.sh
+```
+
+> **Note:** Full ETL requires a working SAS installation and `sas` on your PATH.
+> Without SAS, you can still explore the pipeline end-to-end in dry-run mode.
+
+On Windows:
+
+```bat
+git clone https://github.com/stiigg/sas-r-hybrid-clinical-pipeline.git
+cd sas-r-hybrid-clinical-pipeline
+run_pipeline.bat
+```
+
 Generated artefacts are written to `outputs/` while consolidated logs live in
 `logs/`.
 

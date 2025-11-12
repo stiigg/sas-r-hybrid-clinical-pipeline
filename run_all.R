@@ -7,29 +7,76 @@
 #   2. QC tasks defined in specs/qc_manifest.csv.
 #   3. TLF generation based on specs/tlf/tlf_shell_map.csv.
 #
-# Each phase is metadata-driven and requires explicit dry-run environment
-# variables (ETL_DRY_RUN, QC_DRY_RUN, TLF_DRY_RUN) set to boolean-like strings.
+# Each phase is metadata-driven and respects environment variables
+# (ETL_DRY_RUN, QC_DRY_RUN, TLF_DRY_RUN) which now default to safe dry-run
+# values when not explicitly provided.
 
-# ---- Required dry-run flags ----
-required_flags <- c("ETL_DRY_RUN", "QC_DRY_RUN", "TLF_DRY_RUN")
+# --- Dependency management ----------------------------------------------------
 
-missing_flags <- required_flags[Sys.getenv(required_flags, "") == ""]
-if (length(missing_flags) > 0) {
-  stop(
-    sprintf(
-      "Missing required environment flag(s): %s. Each must be 'true' or 'false'.",
-      paste(missing_flags, collapse = ", ")
-    )
-  )
+required_cran_pkgs <- c(
+  "digest",
+  "yaml",
+  "dplyr",
+  "readr",
+  "purrr",
+  "tidyr",
+  "stringr",
+  "glue",
+  "jsonlite",
+  "openxlsx",
+  "haven"
+  # TODO: add any other CRAN packages used in etl/qc/tlf scripts
+)
+
+install_missing_pkgs <- function(pkgs) {
+  missing <- pkgs[!vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)]
+  if (length(missing) == 0L) {
+    message("All required packages already installed.")
+    return(invisible(TRUE))
+  }
+
+  message("Installing missing packages: ", paste(missing, collapse = ", "))
+  install.packages(missing, repos = "https://cloud.r-project.org")
 }
 
-parse_bool <- function(env_var) {
-  val <- tolower(Sys.getenv(env_var))
-  if (!val %in% c("true", "false", "1", "0", "yes", "no", "y", "n")) {
-    stop(sprintf("Environment variable %s must be a boolean-like string, got '%s'.",
-                 env_var, val))
+install_missing_pkgs(required_cran_pkgs)
+invisible(lapply(required_cran_pkgs, require, character.only = TRUE))
+
+# --- Environment configuration -----------------------------------------------
+
+get_bool_env <- function(var, default = TRUE) {
+  raw <- Sys.getenv(var, NA_character_)
+  if (is.na(raw) || !nzchar(raw)) {
+    return(default)
   }
-  val %in% c("true", "1", "yes", "y")
+  tolower(raw) %in% c("false", "0", "no", "n") |> `!`()
+}
+
+ETL_DRY_RUN  <- get_bool_env("ETL_DRY_RUN",  default = TRUE)
+QC_DRY_RUN   <- get_bool_env("QC_DRY_RUN",   default = TRUE)
+TLF_DRY_RUN  <- get_bool_env("TLF_DRY_RUN",  default = TRUE)
+
+message("Configuration:")
+message("  ETL_DRY_RUN  = ", ETL_DRY_RUN)
+message("  QC_DRY_RUN   = ", QC_DRY_RUN)
+message("  TLF_DRY_RUN  = ", TLF_DRY_RUN)
+
+check_sas_available <- function() {
+  status <- tryCatch(
+    system("sas -help > /dev/null 2>&1"),
+    error = function(e) 1L
+  )
+
+  if (!identical(status, 0L)) {
+    stop(
+      "SAS does not appear to be available on this system.\n",
+      "For full ETL, ensure that:\n",
+      "  * SAS is installed, and\n",
+      "  * the 'sas' executable is on your PATH\n",
+      "Or re-run with ETL_DRY_RUN=true to skip SAS-dependent steps.",
+      call. = FALSE
+    )
+  }
 }
 
 # ---- Manifest validation helper ----
@@ -82,10 +129,6 @@ log_msg <- function(msg, log_file = pipeline_log) {
   message(line)
 }
 
-if (!requireNamespace("digest", quietly = TRUE)) {
-  stop("Package 'digest' is required for hashing manifests.")
-}
-
 config <- load_tlf_config()
 
 etl_manifest_path <- "specs/etl_manifest.csv"
@@ -118,9 +161,9 @@ validate_manifest(
 tlf_manifest_hash <- digest::digest(tlf_manifest)
 log_msg(sprintf("TLF manifest loaded from %s, hash=%s", tlf_manifest_path, tlf_manifest_hash))
 
-etl_dry_run <- parse_bool("ETL_DRY_RUN")
-qc_dry_run  <- parse_bool("QC_DRY_RUN")
-tlf_dry_run <- parse_bool("TLF_DRY_RUN")
+etl_dry_run <- ETL_DRY_RUN
+qc_dry_run  <- QC_DRY_RUN
+tlf_dry_run <- TLF_DRY_RUN
 
 log_msg(sprintf("ETL_DRY_RUN = %s", etl_dry_run))
 log_msg(sprintf("QC_DRY_RUN  = %s", qc_dry_run))
@@ -128,7 +171,14 @@ log_msg(sprintf("TLF_DRY_RUN = %s", tlf_dry_run))
 
 log_msg("Starting full pipeline run")
 
-etl_results <- run_full_etl(manifest_path = etl_manifest_path, dry_run = etl_dry_run)
+if (!etl_dry_run) {
+  check_sas_available()
+}
+
+etl_results <- run_full_etl(
+  manifest_path = etl_manifest_path,
+  dry_run = etl_dry_run
+)
 log_msg(sprintf("ETL phase completed with %s", paste(unique(etl_results$status), collapse = ",")))
 
 qc_results <- run_qc_plan(
