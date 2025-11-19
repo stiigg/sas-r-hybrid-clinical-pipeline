@@ -9,8 +9,13 @@
 tlf_log <- function(message, log_file = "tlf_run.log", append = TRUE) {
   timestamp <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
   log_dir <- getOption("tlf.log_dir", "logs")
-  dir.create(log_dir, showWarnings = FALSE, recursive = TRUE)
-  path <- file.path(log_dir, log_file)
+  if (dirname(log_file) %in% c(".", "")) {
+    dir.create(log_dir, showWarnings = FALSE, recursive = TRUE)
+    path <- file.path(log_dir, log_file)
+  } else {
+    dir.create(dirname(log_file), showWarnings = FALSE, recursive = TRUE)
+    path <- log_file
+  }
   line <- sprintf("[%s] %s\n", timestamp, message)
   cat(line, file = path, append = append)
   invisible(message)
