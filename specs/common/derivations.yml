@@ -1,0 +1,41 @@
+ADSL-DERV-001:
+  dataset: ADSL
+  variable: AGEGRP
+  description: Age group derived from baseline AGE
+  source_vars: [AGE]
+  algorithm_neutral: "AGEGRP='<65' if AGE<65 else '>=65'"
+  languages:
+    sas: |
+      length AGEGRP $8;
+      if missing(AGE) then AGEGRP = 'UNKNOWN';
+      else if AGE < 65 then AGEGRP = '<65';
+      else AGEGRP = '>=65';
+    r: |
+      AGEGRP <- dplyr::case_when(
+        is.na(AGE) ~ "UNKNOWN",
+        AGE < 65 ~ "<65",
+        TRUE ~ ">=65"
+      )
+
+ADSL-DERV-010:
+  dataset: ADSL
+  variable: SAFFL
+  description: Safety population flag for treated subjects
+  source_vars: [USUBJID]
+  algorithm_neutral: "SAFFL='Y' for all randomized subjects"
+  languages:
+    sas: |
+      length SAFFL $1;
+      SAFFL = 'Y';
+    r: |
+      SAFFL <- rep("Y", times = nrow(adsl))
+
+ADTTE-DERV-001:
+  dataset: ADTTE
+  variable: AVAL
+  description: Copy of analysis value derived from SDTM source
+  source_vars: [AVAL]
+  algorithm_neutral: "AVAL sourced from time-to-event calculations"
+  languages:
+    sas: "* Placeholder for ADTTE derivation;"
+    r: "# Placeholder for ADTTE derivation"

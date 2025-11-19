@@ -5,12 +5,16 @@
 # when available; R steps can be sourced directly. Use the dry_run flag to
 # preview commands without executing them.
 
+`%||%` <- function(x, y) {
+  if (is.null(x) || is.na(x) || !nzchar(x)) y else x
+}
+
 read_etl_manifest <- function(path = "specs/etl_manifest.csv") {
   if (!file.exists(path)) {
     stop(sprintf("ETL manifest not found at %s", path), call. = FALSE)
   }
   manifest <- utils::read.csv(path, stringsAsFactors = FALSE)
-  expected <- c("step_id", "language", "script", "description")
+  expected <- c("step_id", "dataset", "script", "engine", "description", "parity_group")
   missing <- setdiff(expected, names(manifest))
   if (length(missing) > 0) {
     stop(
@@ -25,7 +29,7 @@ read_etl_manifest <- function(path = "specs/etl_manifest.csv") {
 }
 
 run_etl_step <- function(step, dry_run = TRUE, env = parent.frame()) {
-  language <- tolower(step$language)
+  engine <- tolower(step$engine %||% step$language %||% "")
   script <- step$script
   description <- step$description
   command <- NULL
@@ -43,7 +47,7 @@ run_etl_step <- function(step, dry_run = TRUE, env = parent.frame()) {
     )
   }
 
-  if (language %in% c("sas", "sasmacro")) {
+  if (engine %in% c("sas", "sasmacro")) {
     sas_bin <- Sys.which("sas")
     log_path <- file.path("logs", sprintf("%s.log", tools::file_path_sans_ext(basename(script))))
     log_path_full <- normalizePath(log_path, winslash = "/", mustWork = FALSE)
@@ -64,7 +68,7 @@ run_etl_step <- function(step, dry_run = TRUE, env = parent.frame()) {
       status <- if (identical(exit_code, 0L)) "success" else "error"
       message <- if (identical(exit_code, 0L)) "" else sprintf("Exited with code %s", exit_code)
     }
-  } else if (language %in% c("r", "rs")) {
+  } else if (engine %in% c("r", "rs")) {
     command <- sprintf("Rscript %s", shQuote(script))
     if (dry_run) {
       status <- "dry_run"
@@ -76,15 +80,18 @@ run_etl_step <- function(step, dry_run = TRUE, env = parent.frame()) {
     }
   } else {
     status <- "unsupported"
-    message <- sprintf("Unsupported language '%s' for ETL step %s", language, step$step_id)
+    message <- sprintf("Unsupported engine '%s' for ETL step %s", engine, step$step_id)
   }
 
   list(
     step_id = step$step_id,
+    dataset = step$dataset,
+    engine = engine,
     description = description,
     status = status,
     message = message,
-    command = command
+    command = command,
+    parity_group = step$parity_group
   )
 }
 

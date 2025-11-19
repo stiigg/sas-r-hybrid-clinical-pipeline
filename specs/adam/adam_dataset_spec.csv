@@ -1,0 +1,4 @@
+dataset,class,purpose,source,primary_keys
+ADSL,SUBJECT,Population,SDTM,USUBJID
+ADTTE,BDS,Efficacy,SDTM,USUBJID|PARAMCD|AVAL
+ADAE,OCCURRENCE,Safety,SDTM,USUBJID|AEDECOD|ASTDTM

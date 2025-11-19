@@ -115,6 +115,9 @@ source("qc/run_qc.R")
 source("outputs/tlf/r/utils/load_config.R")
 source("outputs/tlf/r/utils/tlf_logging.R")
 source("automation/r/tlf/batch/batch_run_all_tlfs.R")
+if (file.exists("R/mdr_utils.R")) {
+  source("R/mdr_utils.R")
+}
 
 # ---- Simple pipeline logger ----
 if (!dir.exists("logs")) dir.create("logs", recursive = TRUE)
@@ -136,7 +139,7 @@ etl_manifest <- utils::read.csv(etl_manifest_path, stringsAsFactors = FALSE)
 validate_manifest(
   etl_manifest,
   name = "ETL manifest",
-  required_cols = c("step_id", "language", "script", "description")
+  required_cols = c("step_id", "dataset", "script", "engine", "description", "parity_group")
 )
 etl_manifest_hash <- digest::digest(etl_manifest)
 log_msg(sprintf("ETL manifest loaded from %s, hash=%s", etl_manifest_path, etl_manifest_hash))
@@ -180,6 +183,19 @@ etl_results <- run_full_etl(
   dry_run = etl_dry_run
 )
 log_msg(sprintf("ETL phase completed with %s", paste(unique(etl_results$status), collapse = ",")))
+
+if (!etl_dry_run) {
+  adam_checks <- tryCatch({
+    spec <- read_adam_dataset_spec()
+    ensure_adam_datasets(spec)
+  }, error = function(err) {
+    stop(err)
+  })
+  log_msg(sprintf(
+    "Verified %d ADaM dataset expectation(s) from specs/adam/adam_dataset_spec.csv",
+    nrow(adam_checks)
+  ))
+}
 
 qc_results <- run_qc_plan(
   manifest_path = qc_manifest_path,
