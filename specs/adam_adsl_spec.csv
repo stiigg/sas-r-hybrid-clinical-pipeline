@@ -7,3 +7,4 @@ DM,ARMCD,TRT01P,Treatment (planned)
 DM,ARM,TRT01A,Treatment (actual)
 DM,COUNTRY,COUNTRY,Country
 DERIVED,1,SAFFL,All subjects in safety set
+DERIVED,1,AGEGRP,Age grouping derived from AGE

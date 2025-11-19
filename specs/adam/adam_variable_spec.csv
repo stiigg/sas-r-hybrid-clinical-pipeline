@@ -1,0 +1,14 @@
+dataset,var,label,type,length,format,role,origin,derivation_id,codelist_id
+ADSL,USUBJID,Unique Subject Identifier,char,25,,identifier,CRF,,
+ADSL,SUBJID,Subject Identifier for Study,char,15,,identifier,CRF,,
+ADSL,AGE,Age at baseline,num,8,8.1,analysis_var,SDTM,,
+ADSL,SEX,Sex,char,1,,id_var,CRF,,CDISC_SEX
+ADSL,TRT01A,Actual Treatment,char,20,,treatment,SDTM,,
+ADSL,TRT01P,Planned Treatment,char,20,,treatment,SDTM,,
+ADSL,SAFFL,Safety Population Flag,char,1,,flag,derived,ADSL-DERV-010,YN
+ADSL,AGEGRP,Age Category (<65/>=65),char,8,,analysis_flag,derived,ADSL-DERV-001,AGEGRP
+ADTTE,PARAMCD,Parameter Code,char,8,,parameter,assigned,,ADTTE_PARAMCD
+ADTTE,AVAL,Analysis Value,num,8,8.2,analysis_var,derived,ADTTE-DERV-001,
+ADAE,USUBJID,Unique Subject Identifier,char,25,,identifier,SDTM,,
+ADAE,AEDECOD,Dictionary-Derived Term,char,80,,analysis_var,SDTM,,
+ADAE,ASTDTM,Start Date/Time of Adverse Event,char,19,,timing,SDTM,,

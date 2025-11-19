@@ -36,7 +36,7 @@ data adam.adsl;
     by USUBJID;
     if not indt then delete;
 
-    length SAFFL $1;
+    length SAFFL $1 AGEGRP $8;
 
     /* Map variables from DM to ADSL */
     %do i = 1 %to &nmap;
@@ -49,7 +49,15 @@ data adam.adsl;
         %end;
     %end;
 
-    /* Derived safety flag */
+    /* Derivations are tagged so they can be reconciled with
+       specs/common/derivations.yml during QC. */
+
+    *DERIVATION_ID=ADSL-DERV-001;
+    if missing(AGE) then AGEGRP = "UNKNOWN";
+    else if AGE < 65 then AGEGRP = "<65";
+    else AGEGRP = ">=65";
+
+    *DERIVATION_ID=ADSL-DERV-010;
     SAFFL = "Y";
 run;
 %check_syscc(step=ADSL - dataset build);

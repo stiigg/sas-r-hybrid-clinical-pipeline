@@ -1,5 +1,5 @@
-step_id,language,script,description
-setup,sas,etl/sas/00_setup.sas,Initialise libraries and shared macros
-raw_import,sas,etl/sas/10_raw_import.sas,Load raw subject level data
-sdtm_dm,sas,etl/sas/20_sdtm_dm.sas,Derive SDTM DM domain from raw data
-adam_adsl,sas,etl/sas/30_adam_adsl.sas,Build ADaM ADSL dataset from SDTM DM
+step_id,dataset,script,engine,parity_group,description
+setup,NA,etl/sas/00_setup.sas,sas,,Initialise libraries and shared macros
+raw_import,RAW,etl/sas/10_raw_import.sas,sas,,Load raw subject level data
+sdtm_dm,DM,etl/sas/20_sdtm_dm.sas,sas,,Derive SDTM DM domain from raw data
+adam_adsl,ADSL,etl/sas/30_adam_adsl.sas,sas,ADSL_CORE,Build ADaM ADSL dataset from SDTM DM
