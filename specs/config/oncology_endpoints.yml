@@ -1,0 +1,50 @@
+recist:
+  version: "RECIST1.1"
+  response_levels:
+    - "CR"
+    - "PR"
+    - "SD"
+    - "PD"
+    - "NE"
+
+endpoints:
+  ORR:
+    dataset: "ADRESP"
+    paramcd: "ORR"
+    responders: ["CR", "PR"]
+    population: "EFF"
+
+  BOR:
+    dataset: "ADRESP"
+    paramcd: "BOR"
+    rules:
+      use_best_overall: true
+      include_unconfirmed: false
+
+  PFS:
+    dataset: "ADTTE"
+    paramcd: "PFS"
+    base_event: "PD_or_death"
+    population: "EFF"
+    censoring_rules:
+      - name: "no_event_by_cut"
+        condition: "no_PD_and_no_death_on_or_before_cut"
+        censor_code: "C"
+
+  PFS_SENS_NEW_TRT:
+    base: "PFS"
+    paramcd: "PFSNT"
+    extra_censoring:
+      - name: "new_therapy"
+        condition: "new_anti_cancer_therapy_before_PD"
+        censor_code: "T"
+
+  OS:
+    dataset: "ADTTE"
+    paramcd: "OS"
+    base_event: "death"
+    population: "ITT"
+    censoring_rules:
+      - name: "alive_at_cut"
+        condition: "no_death_on_or_before_cut"
+        censor_code: "C"

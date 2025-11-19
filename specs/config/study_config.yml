@@ -1,0 +1,40 @@
+study_id: "SCLC-1234"
+indication: "Extensive-stage small-cell lung cancer"
+
+analysis_cuts:
+  lock_rehearsal_1:
+    date: "2025-10-01"
+    data_root: "data/cuts/2025-10-01"
+  lock_rehearsal_2:
+    date: "2025-11-01"
+    data_root: "data/cuts/2025-11-01"
+  db_lock_final:
+    date: "2025-12-01"
+    data_root: "data/cuts/2025-12-01"
+
+default_cut: "db_lock_final"
+
+populations:
+  ITT:
+    criteria:
+      - "RANDFL == 'Y'"
+  SAF:
+    criteria:
+      - "SAFFL == 'Y'"
+  EFF:
+    criteria:
+      - "EFFFL == 'Y'"
+
+modes:
+  dev:
+    etl: [sdtm, adam]
+    tlf_categories: [sample]
+    qc_level: "light"
+  near_lock:
+    etl: [sdtm, adam]
+    tlf_categories: [core, key_sensitivity]
+    qc_level: "full"
+  final_lock:
+    etl: [sdtm, adam]
+    tlf_categories: [core, key_sensitivity, supplemental]
+    qc_level: "full_strict"

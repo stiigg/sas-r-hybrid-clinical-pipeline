@@ -1,0 +1,16 @@
+adam:
+  ADSL:
+    source_sdtm: [DM, EX, DS]
+    depends_on_adam: []
+
+  ADTTE:
+    source_sdtm: [DM, RS, TU, TR, SV]
+    depends_on_adam: [ADSL]
+
+  ADRESP:
+    source_sdtm: [RS, TU, TR]
+    depends_on_adam: [ADSL]
+
+  ADAE:
+    source_sdtm: [AE, EX]
+    depends_on_adam: [ADSL]
