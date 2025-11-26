@@ -1,0 +1,10 @@
+---
+title: "Pipeline Overview"
+output: html_document
+---
+
+```{r}
+#' Quick demonstration of the package entry point
+library(sasrhybrid)
+run_pipeline(etl_dry_run = TRUE, qc_dry_run = TRUE, tlf_dry_run = TRUE)
+```
