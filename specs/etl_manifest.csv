@@ -3,3 +3,5 @@ setup,NA,etl/sas/00_setup.sas,sas,,Initialise libraries and shared macros
 raw_import,RAW,etl/sas/10_raw_import.sas,sas,,Load raw subject level data
 sdtm_dm,DM,etl/sas/20_sdtm_dm.sas,sas,,Derive SDTM DM domain from raw data
 adam_adsl,ADSL,etl/sas/30_adam_adsl.sas,sas,ADSL_CORE,Build ADaM ADSL dataset from SDTM DM
+sdtm_pharmaverse,SDTM,etl/R/01_build_sdtm_pharmaverse.R,r,,Build SDTM domains with sdtm.oak
+adam_pharmaverse,ADaM,etl/R/02_build_adam_pharmaverse.R,r,,Build ADaM datasets with admiral
