@@ -39,7 +39,7 @@ invisible(lapply(required_cran_pkgs, require, character.only = TRUE))
 }
 
 source("automation/dependencies.R")
-source("automation/hash_utils.R")
+source("automation/change_detection.R")
 source("automation/run_manifest.R")
 source("etl/run_etl.R")
 source("qc/run_qc.R")
@@ -123,60 +123,7 @@ check_sas_available <- function() {
   }
 }
 
-state_path <- ".pipeline_state.json"
-read_previous_state <- function(path) {
-  if (!file.exists(path)) return(NULL)
-  jsonlite::fromJSON(path, simplifyVector = TRUE)
-}
-
-save_state <- function(path, hashes, run_meta, previous_state = NULL) {
-  runs <- if (!is.null(previous_state) && !is.null(previous_state$runs)) {
-    previous_state$runs
-  } else {
-    list()
-  }
-  runs <- append(runs, list(run_meta))
-  jsonlite::write_json(
-    list(
-      sdtm = hashes$sdtm,
-      adam = hashes$adam,
-      specs = hashes$specs,
-      runs = runs
-    ),
-    path,
-    auto_unbox = TRUE,
-    pretty = TRUE
-  )
-}
-
-diff_hashes <- function(current, previous) {
-  previous <- previous %||% list()
-  names_all <- union(names(current), names(previous))
-  changed <- character()
-  for (nm in names_all) {
-    cur_val <- current[[nm]]
-    prev_val <- previous[[nm]]
-    if (!identical(cur_val, prev_val)) {
-      changed <- c(changed, nm)
-    }
-  }
-  unique(changed)
-}
-
-compute_current_hashes <- function(data_root) {
-  list(
-    sdtm = hash_dir_files(file.path(data_root, "sdtm")),
-    adam = hash_dir_files(file.path(data_root, "adam")),
-    specs = list(
-      study_config = hash_file("specs/config/study_config.yml"),
-      oncology_endpoints = hash_file("specs/config/oncology_endpoints.yml"),
-      adam_manifest = hash_file("specs/etl/adam_manifest.yml"),
-      tlf_config = hash_file("specs/tlf/tlf_config.yml")
-    )
-  )
-}
-
-resolve_target_tlfs <- function(target_arg, impacted_adam, mode, study_cfg, spec_changes, initial_run) {
+resolve_target_tlfs <- function(target_arg, impacted_tlfs, mode, study_cfg, changed_tlf_specs, initial_run = FALSE) {
   catalog <- get_tlf_catalog(mode, study_cfg)
   allowed_ids <- vapply(catalog, function(entry) entry$tlf_id, character(1))
   if (nzchar(target_arg) && target_arg != "auto_from_dependencies") {
@@ -184,14 +131,14 @@ resolve_target_tlfs <- function(target_arg, impacted_adam, mode, study_cfg, spec
     hits <- intersect(requested, allowed_ids)
     return(unique(hits))
   }
-  target_ids <- get_impacted_tlfs(impacted_adam, mode, study_cfg)
-  if (length(target_ids) == 0 && (initial_run || length(spec_changes) > 0)) {
-    target_ids <- allowed_ids
+  targets <- unique(c(impacted_tlfs, changed_tlf_specs))
+  if (initial_run && length(targets) == 0) {
+    targets <- allowed_ids
   }
-  if ("tlf_config" %in% spec_changes) {
-    target_ids <- unique(c(target_ids, allowed_ids))
+  if (length(changed_tlf_specs) > 0) {
+    targets <- unique(c(targets, changed_tlf_specs))
   }
-  target_ids
+  targets
 }
 
 args <- parse_cli_args()
@@ -217,41 +164,68 @@ log_msg(sprintf("Pipeline mode: %s", mode))
 log_msg(sprintf("Analysis cut: %s (%s)", cut, data_root))
 log_msg(sprintf("ETL_DRY_RUN=%s QC_DRY_RUN=%s TLF_DRY_RUN=%s", ETL_DRY_RUN, QC_DRY_RUN, TLF_DRY_RUN))
 
-hashes_cur <- compute_current_hashes(data_root)
-prev_state <- read_previous_state(state_path)
-initial_run <- is.null(prev_state)
-prev_sdtm <- if (!is.null(prev_state)) prev_state$sdtm else list()
-prev_adam <- if (!is.null(prev_state)) prev_state$adam else list()
-prev_specs <- if (!is.null(prev_state)) prev_state$specs else list()
+state_files <- c(
+  sdtm = "logs/sdtm_state.yml",
+  adam = "logs/adam_spec_state.yml",
+  tlf = "logs/tlf_spec_state.yml"
+)
+initial_run <- !any(file.exists(state_files))
 
-changed_sdtm <- unique(c(parse_list_arg(args$changed_sdtm), diff_hashes(hashes_cur$sdtm, prev_sdtm)))
-changed_adam <- unique(c(parse_list_arg(args$changed_adam), diff_hashes(hashes_cur$adam, prev_adam)))
-spec_changes <- diff_hashes(hashes_cur$specs, prev_specs)
+sdtm_root <- file.path(data_root, "sdtm")
+changed_sdtm_auto <- detect_changed_sdtm(
+  root = sdtm_root,
+  state_file = state_files[["sdtm"]],
+  mode = Sys.getenv("SDTM_DETECT_MODE", "mtime")
+)
+sdtm_state <- attr(changed_sdtm_auto, "state")
+manual_sdtm <- toupper(parse_list_arg(args$changed_sdtm))
+changed_sdtm <- sort(unique(c(manual_sdtm, toupper(as.character(changed_sdtm_auto)))))
+
+changed_adam_auto <- detect_changed_adam_specs(
+  state_file = state_files[["adam"]],
+  mode = Sys.getenv("ADAM_DETECT_MODE", "mtime")
+)
+adam_state <- attr(changed_adam_auto, "state")
+manual_adam <- toupper(parse_list_arg(args$changed_adam))
+changed_adam_specs <- sort(unique(c(manual_adam, toupper(as.character(changed_adam_auto)))))
+
+changed_tlf_auto <- detect_changed_tlfs_specs(
+  state_file = state_files[["tlf"]],
+  mode = Sys.getenv("TLF_DETECT_MODE", "mtime")
+)
+tlf_state <- attr(changed_tlf_auto, "state")
+changed_tlf_specs <- sort(unique(toupper(as.character(changed_tlf_auto))))
 
 log_msg(sprintf("Detected SDTM changes: %s", if (length(changed_sdtm) == 0) "none" else paste(changed_sdtm, collapse = ",")))
-log_msg(sprintf("Detected ADaM changes: %s", if (length(changed_adam) == 0) "none" else paste(changed_adam, collapse = ",")))
-log_msg(sprintf("Detected spec changes: %s", if (length(spec_changes) == 0) "none" else paste(spec_changes, collapse = ",")))
+log_msg(sprintf("Detected ADaM spec/code changes: %s", if (length(changed_adam_specs) == 0) "none" else paste(changed_adam_specs, collapse = ",")))
+log_msg(sprintf("Detected TLF spec/code changes: %s", if (length(changed_tlf_specs) == 0) "none" else paste(changed_tlf_specs, collapse = ",")))
 
-impacted_from_sdtm <- get_impacted_adam_from_sdtm(changed_sdtm)
-impacted_from_adam <- get_impacted_adam_from_adam(changed_adam)
-impacted_adam <- unique(c(changed_adam, impacted_from_sdtm, impacted_from_adam))
-
-if (initial_run && length(impacted_adam) == 0) {
-  adam_manifest <- read_adam_manifest()
-  impacted_adam <- names(adam_manifest$adam)
-}
-if (any(spec_changes %in% c("study_config", "adam_manifest", "oncology_endpoints"))) {
-  adam_manifest <- read_adam_manifest()
-  impacted_adam <- unique(c(impacted_adam, names(adam_manifest$adam)))
-}
+adam_manifest <- read_adam_manifest()
+impacted_from_sdtm <- get_impacted_adam_from_sdtm(changed_sdtm, manifest = adam_manifest)
+changed_adam_seed <- unique(c(changed_adam_specs, impacted_from_sdtm))
+impacted_adam <- get_impacted_adam_from_adam(changed_adam_seed, manifest = adam_manifest)
 
 log_msg(sprintf("Impacted ADaM datasets: %s", if (length(impacted_adam) == 0) "none" else paste(impacted_adam, collapse = ",")))
 
-target_tlf_ids <- resolve_target_tlfs(args$target_tlfs, impacted_adam, mode, study_cfg, spec_changes, initial_run)
+impacted_tlfs_from_adam <- get_impacted_tlfs(
+  changed_adam = impacted_adam,
+  mode = mode,
+  study_cfg = study_cfg
+)
+
+target_candidates <- unique(c(impacted_tlfs_from_adam, changed_tlf_specs))
+target_tlf_ids <- resolve_target_tlfs(
+  target_arg = args$target_tlfs,
+  impacted_tlfs = target_candidates,
+  mode = mode,
+  study_cfg = study_cfg,
+  changed_tlf_specs = changed_tlf_specs,
+  initial_run = initial_run
+)
 log_msg(sprintf("Target TLFs: %s", if (length(target_tlf_ids) == 0) "none" else paste(target_tlf_ids, collapse = ",")))
 
-run_sdtm <- initial_run || length(changed_sdtm) > 0 || any(spec_changes %in% c("study_config"))
-run_adam <- initial_run || length(impacted_adam) > 0
+run_sdtm <- initial_run || length(changed_sdtm) > 0
+run_adam <- initial_run || run_sdtm || length(impacted_adam) > 0
 run_qc <- (!QC_DRY_RUN) && (initial_run || length(target_tlf_ids) > 0 || run_adam)
 run_tlf <- length(target_tlf_ids) > 0
 
@@ -347,7 +321,17 @@ run_meta <- list(
   analysis_cut = cut,
   target_tlfs = target_tlf_ids
 )
-save_state(state_path, hashes_cur, run_meta, prev_state)
+
+if (!is.null(sdtm_state)) {
+  commit_sdtm_state(sdtm_state, state_files[["sdtm"]])
+}
+if (!is.null(adam_state)) {
+  commit_adam_spec_state(adam_state, state_files[["adam"]])
+}
+if (!is.null(tlf_state)) {
+  commit_tlf_spec_state(tlf_state, state_files[["tlf"]])
+}
+
 manifest_name <- sprintf("run_manifest_%s.yml", format(Sys.time(), "%Y%m%d_%H%M%S"))
 write_run_manifest(
   manifest_path = file.path("logs", manifest_name),
@@ -355,9 +339,12 @@ write_run_manifest(
   pipeline_mode = mode,
   analysis_cut = cut,
   data_root = data_root,
-  sdtm_hashes = hashes_cur$sdtm,
-  adam_hashes = hashes_cur$adam,
-  spec_hashes = hashes_cur$specs,
+  sdtm_hashes = sdtm_state %||% list(),
+  adam_hashes = adam_state %||% list(),
+  spec_hashes = list(
+    adam_specs = adam_state %||% list(),
+    tlf_specs = tlf_state %||% list()
+  ),
   steps_ran = steps_run
 )
 

@@ -58,6 +58,36 @@ Generated artefacts are written to `outputs/` while consolidated logs live in
 | `archive/` | Legacy folder layout retained for traceability |
 | `logs/` | Execution logs written by the orchestrator |
 
+## Incremental, metadata-driven runs
+
+The repository now supports selective execution driven by lightweight change
+detection plus the SDTM→ADaM→TLF dependency graph:
+
+* `automation/change_detection.R` snapshots SDTM domain files, ADaM specs/code,
+  and TLF specs/code into YAML under `logs/` and reports what changed since the
+  last successful run.
+* `automation/dependencies.R` reads manifests in `specs/` and expands those
+  changes to impacted ADaM datasets and TLF shells.
+* `run_all.R` wires the two together so only impacted ETL, ADaM, QC, and TLF
+  steps run.
+
+Common invocations:
+
+```bash
+# Automatic detection using file mtimes (default)
+Rscript run_all.R
+
+# Force specific SDTM/ADaM changes
+CHANGED_SDTM=AE,VS CHANGED_ADAM=ADSL Rscript run_all.R
+
+# Switch detection mode to content hashes (requires {digest})
+SDTM_DETECT_MODE=hash ADAM_DETECT_MODE=hash TLF_DETECT_MODE=hash Rscript run_all.R
+```
+
+State is stored at `logs/sdtm_state.yml`, `logs/adam_spec_state.yml`, and
+`logs/tlf_spec_state.yml`. Delete these files to force a “first run” refresh of
+all steps.
+
 ## Adding new TLFs
 
 1. Create paired scripts under `outputs/tlf/r/gen/` and `qc/r/tlf/` using the
