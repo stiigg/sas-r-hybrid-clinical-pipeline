@@ -1,5 +1,11 @@
 # Utilities for reasoning about SDTM/ADaM/TLF dependencies using the new
 # metadata assets that live under specs/.
+#
+# This file is intentionally side-effect free: it reads manifests/configuration
+# and expands sets of changed SDTM or ADaM identifiers into the full set of
+# impacted ADaM datasets and TLF IDs. Change detection lives elsewhere
+# (automation/change_detection.R) and passes in the seed vectors
+# `changed_sdtm` and `changed_adam`.
 
 safely_read_yaml <- function(path) {
   if (!file.exists(path)) {
