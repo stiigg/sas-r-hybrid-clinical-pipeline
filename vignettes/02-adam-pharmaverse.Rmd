@@ -1,0 +1,10 @@
+---
+title: "ADaM Build via Pharmaverse"
+output: html_document
+---
+
+```{r}
+library(sasrhybrid)
+# Build demonstration ADaM datasets from SDTM XPTs
+build_adam_pharmaverse()
+```

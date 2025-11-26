@@ -1,0 +1,10 @@
+---
+title: "TLF 14.3.1 – AE Summary"
+output: html_document
+---
+
+```{r}
+library(sasrhybrid)
+# Generate AE summary table using existing manifest-based runner
+run_tlf_set(target_ids = c("AET02"))
+```
