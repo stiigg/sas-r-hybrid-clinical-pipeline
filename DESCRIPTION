@@ -7,7 +7,7 @@ Authors@R:
 Description: Minimal example of a SAS–R hybrid pipeline for clinical
     trial programming. Demonstrates metadata-driven SDTM/ADaM ETL,
     QC, and CSR-ready TLF generation via a project-specific R package.
-Depends: R (>= 4.3.0)
+Depends: R (>= 4.3.1)
 Imports:
     dplyr,
     purrr,
