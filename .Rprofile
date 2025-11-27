@@ -1,11 +1,11 @@
 ## Project-specific environment for sasrhybrid
 
 # 1) Enforce R version
-R_version <- "4.3.1"
-if (getRversion() != R_version) {
+R_min_version <- "4.3.1"
+if (getRversion() < R_min_version) {
   stop(
-    sprintf("Project requires R %s, but you're using %s.",
-            R_version, getRversion()),
+    sprintf("Project requires R >= %s, but you're using %s.",
+            R_min_version, getRversion()),
     call. = FALSE
   )
 }
