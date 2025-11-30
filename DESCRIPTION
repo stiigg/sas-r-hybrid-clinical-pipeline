@@ -13,6 +13,7 @@ Imports:
     purrr,
     yaml,
     readr,
+    jsonlite,
     admiral,
     haven,
     lubridate,

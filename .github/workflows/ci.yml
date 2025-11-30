@@ -18,9 +18,13 @@ jobs:
           use-public-rspm: true
 
       - name: Install dependencies
-        run: |
-          Rscript -e "install.packages(c('yaml'), repos = 'https://cloud.r-project.org')"
-        continue-on-error: true
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::jsonlite
+          needs: check
+
+      - name: Ensure jsonlite is available
+        run: Rscript -e "if (!requireNamespace('jsonlite', quietly = TRUE)) install.packages('jsonlite', repos = 'https://cloud.r-project.org')"
 
       - name: Run repository tests
         run: Rscript tests/run_tests.R
