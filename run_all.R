@@ -15,7 +15,14 @@ required_cran_pkgs <- c(
   "jsonlite",
   "openxlsx",
   "haven",
-  "testthat"
+  "testthat",
+  "admiral",
+  "lubridate",
+  "cli",
+  "rlang",
+  "r2rtf",
+  "pkglite",
+  "sdtm.oak"
 )
 
 install_missing_pkgs <- function(pkgs) {
@@ -51,6 +58,9 @@ if (file.exists("validation/check_golden_patients.R")) {
 }
 if (file.exists("R/mdr_utils.R")) {
   source("R/mdr_utils.R")
+}
+if (file.exists("etl/mock_etl.R")) {
+  source("etl/mock_etl.R")
 }
 
 parse_bool_env <- function(var, default = TRUE) {
@@ -151,6 +161,7 @@ config <- load_tlf_config()
 ETL_DRY_RUN <- parse_bool_env("ETL_DRY_RUN", TRUE)
 QC_DRY_RUN <- parse_bool_env("QC_DRY_RUN", TRUE)
 TLF_DRY_RUN <- parse_bool_env("TLF_DRY_RUN", TRUE)
+USE_MOCK_ETL <- ETL_DRY_RUN || tolower(Sys.getenv("MOCK_ETL", "false")) == "true"
 
 if (!dir.exists("logs")) dir.create("logs", recursive = TRUE)
 pipeline_log <- "logs/pipeline.log"
@@ -158,6 +169,22 @@ log_msg <- function(msg) {
   line <- sprintf("[%s][%s] %s", format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z"), Sys.info()[["user"]], msg)
   cat(line, "\n", file = pipeline_log, append = TRUE)
   message(line)
+}
+
+run_mock_etl <- function(output_root = "outputs/mock", n = 100) {
+  if (!dir.exists(output_root)) {
+    dir.create(output_root, recursive = TRUE, showWarnings = FALSE)
+  }
+  mock_dm <- generate_mock_dm(n)
+  mock_adsl <- generate_mock_adsl(mock_dm)
+
+  dm_path <- file.path(output_root, "dm.csv")
+  adsl_path <- file.path(output_root, "adsl.csv")
+
+  utils::write.csv(mock_dm, dm_path, row.names = FALSE)
+  utils::write.csv(mock_adsl, adsl_path, row.names = FALSE)
+
+  list(dm = dm_path, adsl = adsl_path)
 }
 
 log_msg(sprintf("Pipeline mode: %s", mode))
@@ -229,7 +256,7 @@ run_adam <- initial_run || run_sdtm || length(impacted_adam) > 0
 run_qc <- (!QC_DRY_RUN) && (initial_run || length(target_tlf_ids) > 0 || run_adam)
 run_tlf <- length(target_tlf_ids) > 0
 
-if (!ETL_DRY_RUN && run_sdtm) {
+if (!USE_MOCK_ETL && !ETL_DRY_RUN && run_sdtm) {
   check_sas_available()
 }
 
@@ -255,8 +282,24 @@ steps_run <- character()
 log_msg("Starting pipeline orchestration")
 
 if (run_sdtm) {
-  log_msg(sprintf("Running ETL phase (dry_run=%s)", ETL_DRY_RUN))
-  etl_results <- run_full_etl(manifest_path = etl_manifest_path, dry_run = ETL_DRY_RUN)
+  if (USE_MOCK_ETL) {
+    log_msg("Running mock ETL phase (SAS-free)")
+    mock_outputs <- run_mock_etl()
+    etl_results <- data.frame(
+      step_id = "mock_etl",
+      dataset = c("DM", "ADSL"),
+      engine = "r",
+      description = "Synthetic ETL for demo/testing",
+      status = "success",
+      message = sprintf("Written to %s", unlist(mock_outputs)),
+      command = NA_character_,
+      parity_group = NA_character_,
+      stringsAsFactors = FALSE
+    )
+  } else {
+    log_msg(sprintf("Running ETL phase (dry_run=%s)", ETL_DRY_RUN))
+    etl_results <- run_full_etl(manifest_path = etl_manifest_path, dry_run = ETL_DRY_RUN)
+  }
   steps_run <- c(steps_run, sprintf("ETL:%s", paste(unique(etl_results$status), collapse = ",")))
 } else {
   log_msg("Skipping ETL phase – no impacted SDTM")

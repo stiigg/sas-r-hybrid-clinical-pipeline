@@ -106,6 +106,10 @@ run_full_etl <- function(manifest_path = "specs/etl_manifest.csv", dry_run = TRU
 if (identical(environment(), globalenv()) && !interactive()) {
   dry_run_env <- tolower(Sys.getenv("ETL_DRY_RUN", "true"))
   dry_run <- dry_run_env %in% c("true", "1", "yes", "y")
+  if (tolower(Sys.getenv("MOCK_ETL", "false")) == "true") {
+    message("MOCK_ETL=true detected; skipping manifest-driven ETL in favour of mock outputs managed by run_all.R")
+    quit(status = 0)
+  }
   manifest_path <- commandArgs(trailingOnly = TRUE)
   manifest_path <- if (length(manifest_path) > 0) manifest_path[[1]] else "specs/etl_manifest.csv"
   summary <- run_full_etl(manifest_path = manifest_path, dry_run = dry_run)

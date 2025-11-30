@@ -1,7 +1,36 @@
 {
   "R": {
-    "Version": "4.3.1",
-    "Repositories": []
+    "Version": "4.3.3",
+    "Repositories": [
+      {
+        "Name": "CRAN",
+        "URL": "https://cloud.r-project.org"
+      }
+    ]
   },
-  "Packages": {}
+  "Packages": {
+    "admiral": {
+      "Version": "0.0.0",
+      "Source": "Repository",
+      "Repository": "CRAN"
+    },
+    "cli": {"Version": "0.0.0", "Source": "Repository", "Repository": "CRAN"},
+    "digest": {"Version": "0.0.0", "Source": "Repository", "Repository": "CRAN"},
+    "dplyr": {"Version": "0.0.0", "Source": "Repository", "Repository": "CRAN"},
+    "glue": {"Version": "0.0.0", "Source": "Repository", "Repository": "CRAN"},
+    "haven": {"Version": "0.0.0", "Source": "Repository", "Repository": "CRAN"},
+    "jsonlite": {"Version": "0.0.0", "Source": "Repository", "Repository": "CRAN"},
+    "lubridate": {"Version": "0.0.0", "Source": "Repository", "Repository": "CRAN"},
+    "openxlsx": {"Version": "0.0.0", "Source": "Repository", "Repository": "CRAN"},
+    "pkglite": {"Version": "0.0.0", "Source": "Repository", "Repository": "CRAN"},
+    "purrr": {"Version": "0.0.0", "Source": "Repository", "Repository": "CRAN"},
+    "r2rtf": {"Version": "0.0.0", "Source": "Repository", "Repository": "CRAN"},
+    "readr": {"Version": "0.0.0", "Source": "Repository", "Repository": "CRAN"},
+    "rlang": {"Version": "0.0.0", "Source": "Repository", "Repository": "CRAN"},
+    "sdtm.oak": {"Version": "0.0.0", "Source": "Repository", "Repository": "CRAN"},
+    "stringr": {"Version": "0.0.0", "Source": "Repository", "Repository": "CRAN"},
+    "testthat": {"Version": "0.0.0", "Source": "Repository", "Repository": "CRAN"},
+    "tidyr": {"Version": "0.0.0", "Source": "Repository", "Repository": "CRAN"},
+    "yaml": {"Version": "0.0.0", "Source": "Repository", "Repository": "CRAN"}
+  }
 }

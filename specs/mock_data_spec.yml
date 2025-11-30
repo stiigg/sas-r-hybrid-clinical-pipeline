@@ -1,0 +1,28 @@
+mock_etl:
+  description: Synthetic SDTM/ADaM outputs generated when MOCK_ETL=true or ETL_DRY_RUN=true.
+  outputs:
+    dm:
+      path: outputs/mock/dm.csv
+      description: Simplified DM domain with subject-level demographics.
+      columns:
+        - STUDYID
+        - DOMAIN
+        - USUBJID
+        - SUBJID
+        - SITEID
+        - ARM
+        - SEX
+        - AGE
+        - RACE
+        - TRTSDT
+        - TRTSDTM
+        - ARMCD
+    adsl:
+      path: outputs/mock/adsl.csv
+      description: Derived ADSL built from mock DM data for downstream analyses.
+      columns:
+        - SAFFL
+        - ITTFL
+        - EFFICACYFL
+        - RANDDT
+        - ANALYSIS_VISIT

@@ -1,26 +1,33 @@
 Package: sasrhybrid
 Title: SAS–R Hybrid Clinical Pipeline Demo
 Version: 0.0.0.9000
-Authors@R: 
+Authors@R:
     person("First", "Last", role = c("aut", "cre"),
            email = "you@example.com")
 Description: Minimal example of a SAS–R hybrid pipeline for clinical
     trial programming. Demonstrates metadata-driven SDTM/ADaM ETL,
     QC, and CSR-ready TLF generation via a project-specific R package.
-Depends: R (>= 4.3.1)
+Depends: R (>= 4.3.3)
 Imports:
-    dplyr,
-    purrr,
+    digest,
     yaml,
+    dplyr,
     readr,
-    admiral,
+    purrr,
+    tidyr,
+    stringr,
+    glue,
+    jsonlite,
+    openxlsx,
     haven,
+    testthat,
+    admiral,
     lubridate,
     cli,
-    glue,
     rlang,
     r2rtf,
-    pkglite
+    pkglite,
+    sdtm.oak
 Encoding: UTF-8
 License: file LICENSE
 LazyData: true

@@ -33,6 +33,19 @@ ETL_DRY_RUN=false QC_DRY_RUN=false TLF_DRY_RUN=false ./run_pipeline.sh
 > **Note:** Full ETL requires a working SAS installation and `sas` on your PATH.
 > Without SAS, you can still explore the pipeline end-to-end in dry-run mode.
 
+### SAS-free mock ETL
+
+When SAS is not available you can still create realistic-looking SDTM/ADaM
+outputs by enabling the mock ETL shim. The orchestrator will generate synthetic
+DM and ADSL datasets using R only and write them under `outputs/mock/`.
+
+```bash
+MOCK_ETL=true ./run_pipeline.sh
+```
+
+This mode is also activated automatically whenever `ETL_DRY_RUN=true`. See
+`specs/mock_data_spec.yml` for the structure of the generated datasets.
+
 On Windows:
 
 ```bat
