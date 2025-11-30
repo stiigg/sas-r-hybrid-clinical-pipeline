@@ -58,6 +58,10 @@ Generated artefacts are written to `outputs/` while consolidated logs live in
 | `archive/` | Legacy folder layout retained for traceability |
 | `logs/` | Execution logs written by the orchestrator |
 
+QC report generation depends on the `{jsonlite}` package; it is declared in
+`DESCRIPTION` and captured in `renv.lock` so GitHub Actions installs it before
+running `qc/tests/run_tests.R`.
+
 ## Incremental, metadata-driven runs
 
 The repository now supports selective execution driven by lightweight change

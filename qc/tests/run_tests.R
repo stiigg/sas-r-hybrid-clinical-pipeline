@@ -1,5 +1,9 @@
 #!/usr/bin/env Rscript
 
+if (!requireNamespace("jsonlite", quietly = TRUE)) {
+  stop("The 'jsonlite' package is required to run QC tests. Please install it and retry.", call. = FALSE)
+}
+
 source(file.path("qc", "run_qc.R"))
 
 message("[QC TEST] Loading manifest...")
