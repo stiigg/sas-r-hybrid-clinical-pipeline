@@ -1,0 +1,57 @@
+name: Deploy Shiny App
+
+on:
+  workflow_run:
+    workflows: ["Clinical Pipeline Execution"]
+    types: [completed]
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.3.2'
+          use-public-rspm: true
+      
+      - name: Install Shiny dependencies
+        run: |
+          Rscript -e "install.packages(c('shiny','rsconnect','DT','dplyr','ggplot2','haven'), repos='https://cloud.r-project.org')"
+      
+      - name: Deploy to shinyapps.io
+        if: github.event_name != 'pull_request'
+        env:
+          SHINY_ACC_NAME: ${{ secrets.SHINY_ACC_NAME }}
+          SHINY_TOKEN: ${{ secrets.SHINY_TOKEN }}
+          SHINY_SECRET: ${{ secrets.SHINY_SECRET }}
+        run: |
+          Rscript -e "
+            if (Sys.getenv('SHINY_ACC_NAME') != '' && 
+                Sys.getenv('SHINY_TOKEN') != '' && 
+                Sys.getenv('SHINY_SECRET') != '') {
+              rsconnect::setAccountInfo(
+                name = Sys.getenv('SHINY_ACC_NAME'),
+                token = Sys.getenv('SHINY_TOKEN'),
+                secret = Sys.getenv('SHINY_SECRET')
+              )
+              rsconnect::deployApp(
+                appDir = 'app/',
+                appName = 'clinical-pipeline-explorer',
+                forceUpdate = TRUE
+              )
+              message('Shiny app deployed successfully!')
+            } else {
+              message('SHINY credentials not configured. Skipping deployment.')
+              message('To deploy: Add SHINY_ACC_NAME, SHINY_TOKEN, and SHINY_SECRET to repository secrets.')
+            }
+          "
