@@ -1,0 +1,97 @@
+name: Clinical Pipeline Execution
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'data/**'
+      - 'sas/**'
+      - 'etl/**'
+      - 'specs/**'
+      - 'automation/**'
+  workflow_dispatch:
+    inputs:
+      pipeline_mode:
+        description: 'Pipeline mode (dev/near_lock/final_lock)'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - near_lock
+          - final_lock
+      etl_dry_run:
+        description: 'ETL dry run (skip actual execution)'
+        type: boolean
+        default: false
+      qc_dry_run:
+        description: 'QC dry run (skip actual execution)'
+        type: boolean
+        default: false
+      tlf_dry_run:
+        description: 'TLF dry run (skip actual execution)'
+        type: boolean
+        default: false
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    # For production use with SAS, replace with: runs-on: [self-hosted, sas-enabled]
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      ETL_DRY_RUN: ${{ github.event.inputs.etl_dry_run || 'true' }}
+      QC_DRY_RUN: ${{ github.event.inputs.qc_dry_run || 'true' }}
+      TLF_DRY_RUN: ${{ github.event.inputs.tlf_dry_run || 'true' }}
+      PIPELINE_MODE: ${{ github.event.inputs.pipeline_mode || 'dev' }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.3.2'
+          use-public-rspm: true
+      
+      - name: Cache R packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: ${{ runner.os }}-r-pipeline-${{ hashFiles('**/DESCRIPTION', '**/renv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-r-pipeline-
+      
+      - name: Install R dependencies
+        run: |
+          Rscript -e "install.packages(c('digest','yaml','dplyr','readr','purrr','tidyr','stringr','glue','jsonlite','openxlsx','haven','testthat','cli'), repos='https://cloud.r-project.org')"
+      
+      - name: Execute pipeline
+        run: Rscript run_all.R
+      
+      - name: Upload pipeline logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pipeline-logs-${{ github.run_number }}
+          path: logs/
+          retention-days: 90
+      
+      - name: Upload outputs
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: pipeline-outputs-${{ github.run_number }}
+          path: outputs/
+          retention-days: 30
+      
+      - name: Commit results back to repo
+        if: success() && github.event_name == 'workflow_dispatch'
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+          git add logs/ outputs/
+          git diff --staged --quiet || git commit -m "Pipeline run ${{ github.run_number }} outputs [skip ci]"
+          git push
