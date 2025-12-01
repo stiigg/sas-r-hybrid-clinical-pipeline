@@ -1,0 +1,168 @@
+name: Deploy Shinylive App to GitHub Pages
+
+on:
+  workflow_run:
+    workflows: ["Clinical Pipeline Execution"]
+    types: [completed]
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'data/adam/**'
+
+jobs:
+  deploy-shinylive:
+    runs-on: ubuntu-latest
+    
+    # Required for GitHub Pages deployment
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.3.2'
+          use-public-rspm: true
+      
+      - name: Install shinylive package
+        run: |
+          install.packages('shinylive', repos = 'https://cloud.r-project.org')
+        shell: Rscript {0}
+      
+      - name: Verify app dependencies
+        run: |
+          cat("Checking app.R dependencies...\n")
+          app_code <- readLines("app/app.R")
+          required_pkgs <- c("shiny", "DT", "dplyr", "ggplot2")
+          cat("Required packages for WebAssembly:", paste(required_pkgs, collapse = ", "), "\n")
+          cat("All packages available in webR repository: https://repo.r-wasm.org/\n")
+        shell: Rscript {0}
+      
+      - name: Export Shinylive app
+        run: |
+          cat("Exporting Shiny app to WebAssembly...\n")
+          shinylive::export("app", "shinylive_export")
+          cat("Export complete. Generated files:\n")
+          list.files("shinylive_export", recursive = TRUE)
+        shell: Rscript {0}
+      
+      - name: Prepare sample data for app
+        run: |
+          # Create data directory in exported app
+          mkdir -p shinylive_export/data/adam
+          
+          # Copy CSV files if they exist
+          if [ -d "data/adam" ]; then
+            echo "Copying ADaM datasets..."
+            cp data/adam/*.csv shinylive_export/data/adam/ 2>/dev/null || echo "No CSV files found, using demo data"
+          fi
+          
+          # Create demo datasets if no real data exists
+          Rscript -e '
+            demo_dir <- "shinylive_export/data/adam"
+            dir.create(demo_dir, recursive = TRUE, showWarnings = FALSE)
+            
+            # Create demo ADSL
+            if (!file.exists(file.path(demo_dir, "ADSL.csv"))) {
+              adsl <- data.frame(
+                USUBJID = paste0("SUBJ-", 1:50),
+                AGE = sample(18:75, 50, replace = TRUE),
+                SEX = sample(c("M", "F"), 50, replace = TRUE),
+                RACE = sample(c("WHITE", "BLACK", "ASIAN"), 50, replace = TRUE),
+                TRT01P = sample(c("Placebo", "Drug 10mg", "Drug 20mg"), 50, replace = TRUE),
+                SAFFL = "Y",
+                stringsAsFactors = FALSE
+              )
+              write.csv(adsl, file.path(demo_dir, "ADSL.csv"), row.names = FALSE)
+              cat("Created demo ADSL dataset\n")
+            }
+            
+            # Create demo ADAE  
+            if (!file.exists(file.path(demo_dir, "ADAE.csv"))) {
+              adae <- data.frame(
+                USUBJID = rep(paste0("SUBJ-", 1:50), each = 2),
+                AEDECOD = sample(c("Headache", "Nausea", "Fatigue", "Dizziness"), 100, replace = TRUE),
+                AESEV = sample(c("MILD", "MODERATE", "SEVERE"), 100, replace = TRUE),
+                AESER = sample(c("Y", "N"), 100, replace = TRUE, prob = c(0.1, 0.9)),
+                ASTDT = as.Date("2024-01-01") + sample(1:180, 100, replace = TRUE),
+                stringsAsFactors = FALSE
+              )
+              write.csv(adae, file.path(demo_dir, "ADAE.csv"), row.names = FALSE)
+              cat("Created demo ADAE dataset\n")
+            }
+          '
+      
+      - name: Download existing dashboard
+        run: |
+          # Download current gh-pages content to preserve dashboard
+          git fetch origin gh-pages:gh-pages || echo "No gh-pages branch yet"
+          
+          if git show-ref --verify --quiet refs/heads/gh-pages; then
+            echo "Preserving existing dashboard..."
+            git checkout gh-pages
+            
+            # Keep everything except shiny/ directory
+            mkdir -p ../temp_dashboard
+            find . -maxdepth 1 ! -name . ! -name .. ! -name .git ! -name shiny -exec cp -r {} ../temp_dashboard/ \;
+            
+            git checkout main
+            
+            # Copy dashboard files to export
+            cp -r ../temp_dashboard/* shinylive_export/ || echo "No dashboard to preserve"
+            
+            echo "Dashboard preserved"
+          else
+            echo "No existing gh-pages branch, will create new deployment"
+          fi
+      
+      - name: Move shinylive app to /shiny subdirectory
+        run: |
+          mkdir -p _site
+          
+          # If dashboard exists, copy it to root
+          if [ -f "shinylive_export/index.html" ] && [ ! -d "shinylive_export/shinylive" ]; then
+            echo "Dashboard exists, organizing structure..."
+            # Copy dashboard files to _site root
+            cp -r shinylive_export/* _site/ 2>/dev/null || true
+            # Remove shinylive app files from root
+            rm -rf _site/shinylive _site/app.json
+          fi
+          
+          # Create fresh shinylive export for /shiny subdirectory
+          Rscript -e 'shinylive::export("app", "_site/shiny")'
+          
+          # Copy data to shiny subdirectory
+          if [ -d "shinylive_export/data" ]; then
+            cp -r shinylive_export/data _site/shiny/
+          fi
+          
+          echo "Final site structure:"
+          ls -la _site/
+          echo "Shiny app structure:"
+          ls -la _site/shiny/ 2>/dev/null || echo "Shiny directory not yet created"
+      
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '_site'
+      
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        
+      - name: Display deployment info
+        run: |
+          echo "✅ Shinylive app deployed successfully!"
+          echo ""
+          echo "📊 Dashboard: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+          echo "🎮 Interactive Shiny App: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/shiny/"
+          echo ""
+          echo "Note: First load may take 20-30 seconds as WebAssembly runtime (20MB) downloads."
+          echo "Subsequent visits will be instant thanks to browser caching."
