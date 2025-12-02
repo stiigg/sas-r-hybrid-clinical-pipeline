@@ -25,6 +25,8 @@ logs/*
 data/raw/*
 data/sdtm/*
 data/adam/*
+!data/sdtm/README.md
+!data/adam/README.md
 !data/README.md
 !data/raw/source_raw_subjects_example.csv
 

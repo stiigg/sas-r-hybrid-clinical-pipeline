@@ -7,6 +7,22 @@ adam:
     source_sdtm: [DM, RS, TU, TR, SV]
     depends_on_adam: [ADSL]
 
+  ADTR:
+    source_sdtm: [TU, TR]
+    depends_on_adam: [ADSL]
+
+  ADRS:
+    source_sdtm: [TU, TR]
+    depends_on_adam: [ADSL, ADTR]
+
+  ADEFFSUM:
+    source_sdtm: [TU, TR]
+    depends_on_adam: [ADSL, ADTR, ADRS]
+
+  ADBM:
+    source_sdtm: [BM]
+    depends_on_adam: [ADSL]
+
   ADRESP:
     source_sdtm: [RS, TU, TR]
     depends_on_adam: [ADSL]
