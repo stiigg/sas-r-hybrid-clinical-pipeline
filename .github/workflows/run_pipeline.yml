@@ -70,6 +70,16 @@ jobs:
       
       - name: Execute pipeline
         run: Rscript run_all.R
+
+      - name: RECIST Compliance Check
+        if: ${{ env.QC_DRY_RUN != 'true' }}
+        run: |
+          Rscript validation/recist_validator.R
+
+      - name: Survival Endpoint QC
+        if: ${{ env.QC_DRY_RUN != 'true' }}
+        run: |
+          Rscript qc/r/survival/qc_pfs_analysis.R
       
       - name: Upload pipeline logs
         uses: actions/upload-artifact@v4
