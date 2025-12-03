@@ -3,6 +3,6 @@ tlf_qc,tlf_batch,R,qc/r/tlf/run_tlf_qc_batch.R,Run QC scripts for every TLF defi
 adam_adsl_qc,rscript,R,qc/r/adam/qc_adsl.R,Validate ADaM ADSL variables against the specification
 adam_structure_qc,rscript,R,qc/r/qc_adam_structure.R,Reconcile ADaM structure with adam_variable_spec.csv
 derivation_coverage_qc,rscript,R,qc/r/qc_derivation_coverage.R,Confirm derivation metadata coverage across YAML/spec/code
-adam_parity_qc,rscript,R,qc/r/qc_parity_adsl.R,Check SAS vs R parity for ADSL extracts when available
+# adam_parity_qc,rscript,R,qc/r/qc_parity_adsl.R,Check SAS vs R parity for ADSL extracts when available (DISABLED - R-only mode)
 validation_suite,rscript,R,validation/run_cdisc_validation.R,Run CDISC/ADaM compliance checks when tooling is available
 survival_qc,rscript,R,qc/r/survival/qc_pfs_analysis.R,Double-programming check for PFS endpoints
