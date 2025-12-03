@@ -9,9 +9,163 @@
     ]
   },
   "Packages": {
+    "admiral": {
+      "Package": "admiral",
+      "Version": "0.0.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": ""
+    },
+    "admiralonco": {
+      "Package": "admiralonco",
+      "Version": "0.0.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": ""
+    },
+    "cli": {
+      "Package": "cli",
+      "Version": "0.0.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": ""
+    },
+    "digest": {
+      "Package": "digest",
+      "Version": "0.0.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": ""
+    },
+    "dplyr": {
+      "Package": "dplyr",
+      "Version": "0.0.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": ""
+    },
+    "glue": {
+      "Package": "glue",
+      "Version": "0.0.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": ""
+    },
+    "haven": {
+      "Package": "haven",
+      "Version": "0.0.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": ""
+    },
     "jsonlite": {
       "Package": "jsonlite",
       "Version": "1.8.8",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": ""
+    },
+    "lubridate": {
+      "Package": "lubridate",
+      "Version": "0.0.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": ""
+    },
+    "metacore": {
+      "Package": "metacore",
+      "Version": "0.0.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": ""
+    },
+    "metatools": {
+      "Package": "metatools",
+      "Version": "0.0.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": ""
+    },
+    "openxlsx": {
+      "Package": "openxlsx",
+      "Version": "0.0.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": ""
+    },
+    "pkglite": {
+      "Package": "pkglite",
+      "Version": "0.0.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": ""
+    },
+    "purrr": {
+      "Package": "purrr",
+      "Version": "0.0.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": ""
+    },
+    "r2rtf": {
+      "Package": "r2rtf",
+      "Version": "0.0.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": ""
+    },
+    "readr": {
+      "Package": "readr",
+      "Version": "0.0.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": ""
+    },
+    "rlang": {
+      "Package": "rlang",
+      "Version": "0.0.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": ""
+    },
+    "sdtm.oak": {
+      "Package": "sdtm.oak",
+      "Version": "0.0.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": ""
+    },
+    "stringr": {
+      "Package": "stringr",
+      "Version": "0.0.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": ""
+    },
+    "testthat": {
+      "Package": "testthat",
+      "Version": "0.0.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": ""
+    },
+    "tidyr": {
+      "Package": "tidyr",
+      "Version": "0.0.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": ""
+    },
+    "xportr": {
+      "Package": "xportr",
+      "Version": "0.0.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": ""
+    },
+    "yaml": {
+      "Package": "yaml",
+      "Version": "0.0.0",
       "Source": "Repository",
       "Repository": "CRAN",
       "Hash": ""

@@ -9,19 +9,29 @@ Description: Minimal example of a SAS–R hybrid pipeline for clinical
     QC, and CSR-ready TLF generation via a project-specific R package.
 Depends: R (>= 4.3.1)
 Imports:
-    dplyr,
-    purrr,
-    yaml,
-    readr,
-    jsonlite,
     admiral,
-    haven,
-    lubridate,
+    admiralonco,
     cli,
+    digest,
+    dplyr,
     glue,
-    rlang,
+    haven,
+    jsonlite,
+    lubridate,
+    metacore,
+    metatools,
+    openxlsx,
+    pkglite,
+    purrr,
     r2rtf,
-    pkglite
+    readr,
+    rlang,
+    sdtm.oak,
+    stringr,
+    testthat,
+    tidyr,
+    xportr,
+    yaml
 Encoding: UTF-8
 License: file LICENSE
 LazyData: true

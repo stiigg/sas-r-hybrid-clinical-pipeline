@@ -230,7 +230,8 @@ run_qc <- (!QC_DRY_RUN) && (initial_run || length(target_tlf_ids) > 0 || run_ada
 run_tlf <- length(target_tlf_ids) > 0
 
 if (!ETL_DRY_RUN && run_sdtm) {
-  check_sas_available()
+  # SAS check disabled - using R-only pharmaverse workflow
+  message("Running R-based pharmaverse ETL (SAS check bypassed)")
 }
 
 validate_manifest <- function(df, name, required_cols) {
