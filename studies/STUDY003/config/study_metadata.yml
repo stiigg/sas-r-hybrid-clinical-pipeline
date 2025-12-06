@@ -1,0 +1,53 @@
+study_id: "CX-NSCLC-101"
+protocol: "CX-101"
+phase: "Phase I"
+
+# Link to parent portfolio registry
+portfolio_registry: "../../portfolio_registry.yml"
+
+# Study-specific paths (relative to study root)
+paths:
+  raw_data: "data/raw"
+  sdtm: "data/sdtm"
+  adam: "data/adam"
+  outputs: "outputs"
+  logs: "logs"
+
+# CDISC specifications (legacy)
+cdisc:
+  sdtm_version: "1.5"
+  adam_version: "1.0"
+  controlled_terminology: "2021-06-25"
+  
+  # Study-specific SDTM domains
+  sdtm_domains:
+    - DM
+    - AE
+    - CM
+    - LB
+    - VS
+    - EX
+  
+  # Study-specific ADaM datasets
+  adam_datasets:
+    - ADSL
+    - ADAE
+    - ADLB
+    - ADVS
+
+# Analysis populations
+populations:
+  SAFETY: "Safety (received ≥1 dose)"
+
+# Treatment arms
+treatments:
+  - arm_code: "A"
+    arm_name: "Compound-X Dose Escalation"
+
+# Study-specific validation rules
+validation:
+  critical_datasets: ["ADSL", "ADAE"]
+  qc_method: "vendor_qc"  # CRO-delivered with sponsor oversight
+  
+  non_critical_datasets: ["ADLB", "ADVS"]
+  qc_method_nc: "spot_check"

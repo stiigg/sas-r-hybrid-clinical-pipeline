@@ -1,0 +1,56 @@
+study_id: "CX-NSCLC-201"
+protocol: "CX-201"
+phase: "Phase II"
+
+# Link to parent portfolio registry
+portfolio_registry: "../../portfolio_registry.yml"
+
+# Study-specific paths (relative to study root)
+paths:
+  raw_data: "data/raw"
+  sdtm: "data/sdtm"
+  adam: "data/adam"
+  outputs: "outputs"
+  logs: "logs"
+
+# CDISC specifications
+cdisc:
+  sdtm_version: "1.7"
+  adam_version: "1.1"
+  controlled_terminology: "2023-12-15"
+  
+  # Study-specific SDTM domains
+  sdtm_domains:
+    - DM
+    - AE
+    - CM
+    - VS
+    - LB
+    - EX
+    - RS
+  
+  # Study-specific ADaM datasets
+  adam_datasets:
+    - ADSL
+    - ADAE
+    - ADLB
+    - ADVS
+    - ADRS
+
+# Analysis populations
+populations:
+  FAS: "Full Analysis Set"
+  SAFETY: "Safety (received ≥1 dose)"
+
+# Treatment arms
+treatments:
+  - arm_code: "A"
+    arm_name: "Compound-X 100mg"
+
+# Study-specific validation rules
+validation:
+  critical_datasets: ["ADSL", "ADAE", "ADRS"]
+  qc_method: "independent_review"  # Targeted QC
+  
+  non_critical_datasets: ["ADLB", "ADVS"]
+  qc_method_nc: "spot_check"  # Minimal QC
