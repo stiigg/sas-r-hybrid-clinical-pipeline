@@ -58,3 +58,28 @@ contributing.
 
 By following these guidelines you help keep the project reproducible and easy to
 review.
+
+## Pull Request Process
+
+1. **Testing**: Ensure all tests pass with `Rscript -e "testthat::test_dir('tests/testthat')"`
+2. **Documentation**: Update README.md if adding new features or changing usage
+3. **Code Style**: Run `lintr::lint_package()` and address all warnings
+4. **Changelog**: Add entry to docs/CHANGELOG.md under "Unreleased" section
+5. **Validation**: If modifying derivation logic, update validation documentation
+
+## Issue Reporting
+
+When reporting bugs, include:
+- R version and OS
+- Output of `sessionInfo()`
+- Minimal reproducible example
+- Expected vs. actual behavior
+- Relevant log excerpts from `logs/`
+
+## Feature Requests
+
+For new features, describe:
+- Use case and clinical/operational context
+- Proposed technical approach
+- Impact on existing workflows
+- Testing strategy
