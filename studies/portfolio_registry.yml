@@ -1,0 +1,143 @@
+# Portfolio-level configuration for multi-study management
+portfolio:
+  program_id: "COMPOUND-X-ONCOLOGY"
+  program_name: "Compound X Development Program"
+  therapeutic_area: "Oncology"
+  indication: "Non-Small Cell Lung Cancer"
+  compound: "Compound-X"
+  
+studies:
+  STUDY001:
+    study_id: "CX-NSCLC-301"
+    protocol_number: "CX-301"
+    phase: "Phase III"
+    design: "Randomized, Double-Blind, Placebo-Controlled"
+    enrollment_target: 850
+    countries: 12
+    status: "Active - Database Lock Pending"
+    database_lock_planned: "2025-03-15"
+    database_lock_actual: ""
+    primary_endpoint: "Overall Survival"
+    priority: 1  # Regulatory submission critical path
+    
+    team:
+      trial_programmer: "Your Name"
+      lead_statistician: "Dr. Stats Lead"
+      biostatistician: "Stats Support"
+      data_manager: "DM Lead"
+      medical_monitor: "Dr. Clinical"
+    
+    milestones:
+      protocol_finalization: "2023-06-01"
+      first_patient_in: "2023-09-15"
+      last_patient_in: "2024-11-30"
+      interim_analysis_1: "2024-08-15"
+      database_lock: "2025-03-15"
+      nda_submission_target: "2025-06-30"
+    
+    data_sources:
+      edc_system: "Medidata Rave"
+      sdtm_version: "SDTM 1.7"
+      adam_version: "ADaM 1.1"
+      cdisc_ct_version: "2023-12-15"
+    
+    deliverables:
+      - type: "Interim Analysis"
+        deadline: "2024-08-15"
+        status: "Complete"
+      - type: "Final Analysis"
+        deadline: "2025-04-30"
+        status: "In Progress"
+      - type: "NDA Submission Package"
+        deadline: "2025-06-30"
+        status: "Planned"
+  
+  STUDY002:
+    study_id: "CX-NSCLC-201"
+    protocol_number: "CX-201"
+    phase: "Phase II"
+    design: "Single-Arm, Open-Label"
+    enrollment_target: 120
+    countries: 5
+    status: "Active - Enrollment Complete"
+    database_lock_planned: "2025-05-01"
+    primary_endpoint: "Objective Response Rate"
+    priority: 2  # Supports pooled safety
+    
+    team:
+      trial_programmer: "Your Name"
+      lead_statistician: "Dr. Stats Lead"
+      biostatistician: "Junior Stats"
+      data_manager: "DM Support"
+    
+    milestones:
+      first_patient_in: "2024-01-10"
+      last_patient_in: "2024-12-15"
+      database_lock: "2025-05-01"
+    
+    data_sources:
+      edc_system: "Medidata Rave"
+      sdtm_version: "SDTM 1.7"
+      adam_version: "ADaM 1.1"
+      cdisc_ct_version: "2023-12-15"
+  
+  STUDY003:
+    study_id: "CX-NSCLC-101"
+    protocol_number: "CX-101"
+    phase: "Phase I"
+    design: "Dose-Escalation"
+    enrollment_target: 45
+    countries: 1
+    status: "Complete"
+    database_lock_actual: "2024-06-30"
+    primary_endpoint: "Maximum Tolerated Dose"
+    priority: 3  # Historical, supports ISS
+    
+    team:
+      trial_programmer: "External CRO"
+      cro_vendor: "GlobalCRO Inc"
+      lead_statistician: "Dr. Stats Lead"
+    
+    data_sources:
+      edc_system: "OpenClinica"
+      sdtm_version: "SDTM 1.5"  # Legacy version
+      adam_version: "ADaM 1.0"
+      cdisc_ct_version: "2021-06-25"
+
+pooled_analyses:
+  ISS:
+    name: "Integrated Summary of Safety"
+    description: "Pooled safety analysis across Phase I-III"
+    included_studies: ["STUDY001", "STUDY002", "STUDY003"]
+    total_patients: 1015
+    analysis_deadline: "2025-05-15"
+    primary_datasets: ["ADSL", "ADAE", "ADLB", "ADVS"]
+    challenges:
+      - "Harmonize SDTM 1.5 vs 1.7 across studies"
+      - "Different AE coding dictionaries (MedDRA v23 vs v26)"
+  
+  ISE:
+    name: "Integrated Summary of Efficacy"
+    description: "Pooled efficacy for NSCLC indication"
+    included_studies: ["STUDY001", "STUDY002"]
+    total_patients: 970
+    analysis_deadline: "2025-04-30"
+    primary_datasets: ["ADSL", "ADRS", "ADTTE"]
+
+resource_allocation:
+  programmers:
+    - name: "Your Name"
+      role: "Senior Statistical Programmer / Portfolio Lead"
+      allocation:
+        STUDY001: 60  # percent
+        STUDY002: 30
+        pooled_ISS: 10
+    - name: "Junior Programmer A"
+      role: "Statistical Programmer"
+      allocation:
+        STUDY002: 50
+        STUDY001_TLF: 50
+    - name: "External CRO"
+      role: "Vendor Support"
+      allocation:
+        STUDY003: 100

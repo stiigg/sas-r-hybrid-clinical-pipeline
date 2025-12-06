@@ -1,0 +1,62 @@
+study_id: "CX-NSCLC-301"
+protocol: "CX-301"
+phase: "Phase III"
+
+# Link to parent portfolio registry
+portfolio_registry: "../../portfolio_registry.yml"
+
+# Study-specific paths (relative to study root)
+paths:
+  raw_data: "data/raw"
+  sdtm: "data/sdtm"
+  adam: "data/adam"
+  outputs: "outputs"
+  logs: "logs"
+
+# CDISC specifications
+cdisc:
+  sdtm_version: "1.7"
+  adam_version: "1.1"
+  controlled_terminology: "2023-12-15"
+  
+  # Study-specific SDTM domains
+  sdtm_domains:
+    - DM
+    - AE
+    - CM
+    - VS
+    - LB
+    - EX
+    - RS  # RECIST 1.1 tumor assessments
+    - TR  # Tumor results
+  
+  # Study-specific ADaM datasets
+  adam_datasets:
+    - ADSL
+    - ADAE
+    - ADLB
+    - ADVS
+    - ADCM
+    - ADRS  # Response (RECIST)
+    - ADTTE # Time-to-Event (OS, PFS)
+
+# Analysis populations
+populations:
+  ITT: "Intent-to-Treat (all randomized)"
+  PP: "Per-Protocol"
+  SAFETY: "Safety (received ≥1 dose)"
+
+# Treatment arms
+treatments:
+  - arm_code: "A"
+    arm_name: "Compound-X 100mg"
+  - arm_code: "B"
+    arm_name: "Placebo"
+
+# Study-specific validation rules
+validation:
+  critical_datasets: ["ADSL", "ADAE", "ADRS", "ADTTE"]
+  qc_method: "double_programming"  # Full QC
+  
+  non_critical_datasets: ["ADCM", "ADVS"]
+  qc_method_nc: "independent_review"  # Lighter QC
