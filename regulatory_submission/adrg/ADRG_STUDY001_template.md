@@ -1,13 +1,26 @@
 # Analysis Data Reviewer's Guide (ADRG)
-## STUDY001: Phase III Randomized Trial
 
-**Study Title**: [Insert full study title]
+**Study**: STUDY001 - A Phase III Randomized Trial Comparing Treatment vs Placebo in Patients with Advanced Solid Tumors
+
+**Sponsor**: [Company Name]
+
 **Protocol Number**: STUDY001
-**Sponsor**: [Sponsor Name]
-**Data Cut-Off Date**: 2025-06-30
-**eCTD Location**: Module 5.3.5.3
+
 **ADRG Version**: 1.0
+
 **Date**: 2025-12-10
+
+**ADaM Version**: ADaM Implementation Guide v1.3
+
+**SDTM Version**: SDTM Implementation Guide v3.4
+
+---
+
+## Document Control
+
+| Version | Date | Author | Description of Changes |
+|---------|------|--------|------------------------|
+| 1.0 | 2025-12-10 | Clinical Programming Team | Initial version for demonstration portfolio |
 
 ---
 
@@ -17,336 +30,250 @@
 2. [Protocol Description](#2-protocol-description)
 3. [Analysis Datasets](#3-analysis-datasets)
 4. [ADaM Conformance](#4-adam-conformance)
-5. [Data Dependencies](#5-data-dependencies)
-6. [Special Variables and Derivations](#6-special-variables-and-derivations)
+5. [Data Dependencies and Flow](#5-data-dependencies-and-flow)
+6. [Special Variables and Algorithms](#6-special-variables-and-algorithms)
 7. [Program Inventory](#7-program-inventory)
 
----
-
-## 1. Introduction
-
-### 1.1 Purpose
-
-This Analysis Data Reviewer's Guide (ADRG) provides detailed information about the Analysis Data Model (ADaM) datasets submitted for STUDY001. The ADRG facilitates regulatory review by documenting dataset structures, derivation methods, and traceability to source data.
-
-### 1.2 Scope
-
-This ADRG covers the following ADaM datasets:
-- **ADSL**: Subject-Level Analysis Dataset (n=850 subjects)
-- **ADRS**: Response Analysis Dataset (tumor assessments per RECIST 1.1)
-- **ADTTE**: Time-to-Event Analysis Dataset (PFS, OS endpoints)
-
-All datasets conform to CDISC ADaM Implementation Guide version 1.3.
-
-### 1.3 Related Documents
-
-- **Define.xml**: `define_adam_v2.xml` (located in same eCTD module)
-- **Statistical Analysis Plan (SAP)**: Version 2.0, dated 2024-09-15
-- **Protocol**: Version 3.0, dated 2023-11-01
-- **SDTM Define.xml**: Module 5.3.5.4
-
-### 1.4 Software Environment
-
-**Primary Analysis**:
-- R version 4.3.0
-- admiral package 0.12.0 (pharmaverse)
-- Additional packages: dplyr, lubridate, survival
-
-**Quality Control**:
-- Independent R-based QC using admiral
-- 100% dataset concordance achieved
+**Appendices**
+- Appendix A: ADaM Specification Summary
+- Appendix B: Derivation Algorithms
 
 ---
 
-## 2. Protocol Description
+# 1. Introduction
 
-### 2.1 Study Design
+## 1.1 Purpose of This Document
 
-**Design**: Multicenter, randomized, double-blind, placebo-controlled Phase III trial
+This Analysis Data Reviewer's Guide (ADRG) provides comprehensive documentation of the analysis datasets created for STUDY001. It is intended to:
 
-**Population**: Adult patients with advanced solid tumors who progressed after standard therapy
+- Assist regulatory reviewers in understanding the structure, content, and derivation of analysis datasets
+- Provide traceability between analysis datasets (ADaM) and source data (SDTM)
+- Document complex derivation algorithms and special processing logic
+- Serve as a reference for dataset specifications and programming details
 
-**Randomization**: 2:1 ratio (Treatment:Placebo), stratified by:
-- Prior lines of therapy (1 vs 2+)
-- ECOG performance status (0 vs 1)
+This ADRG follows the PHUSE template structure and incorporates recommendations from the FDA Study Data Technical Conformance Guide.
 
-**Sample Size**: 850 patients planned
-- Treatment Arm: ~567 patients
-- Placebo Arm: ~283 patients
+## 1.2 Study Overview
 
-### 2.2 Treatment Arms
+STUDY001 is a Phase III, randomized, double-blind, placebo-controlled trial evaluating the efficacy and safety of an investigational oncology treatment in patients with advanced solid tumors.
 
-- **Treatment Arm**: Investigational drug 200mg PO daily
-- **Placebo Arm**: Matched placebo PO daily
+**Key Study Characteristics**:
+- **Design**: Randomized (1:1), double-blind, placebo-controlled
+- **Population**: Adults with advanced solid tumors, ECOG 0-1
+- **Sample Size**: 850 subjects randomized
+- **Treatment Arms**:
+  - Arm A: Investigational Treatment (n=425)
+  - Arm B: Placebo (n=425)
+- **Primary Endpoint**: Progression-Free Survival (PFS) per RECIST 1.1
+- **Key Secondary Endpoints**:
+  - Overall Survival (OS)
+  - Objective Response Rate (ORR)
+  - Duration of Response (DoR)
+  - Safety and tolerability
 
-Treatment continued until disease progression, unacceptable toxicity, or withdrawal.
+## 1.3 Document Organization
 
-### 2.3 Key Endpoints
+This ADRG is organized into seven main sections:
 
-**Primary Endpoint**:
-- Progression-Free Survival (PFS) per RECIST 1.1
+- **Section 2** describes the clinical trial protocol and key design elements
+- **Section 3** provides detailed descriptions of each ADaM dataset
+- **Section 4** documents conformance to CDISC ADaM standards
+- **Section 5** maps data flow from SDTM to ADaM datasets
+- **Section 6** explains special variables and complex derivation algorithms
+- **Section 7** inventories all programs used to create analysis datasets
 
-**Secondary Endpoints**:
-- Overall Response Rate (ORR)
-- Duration of Response (DoR)
-- Overall Survival (OS)
-- Safety and tolerability
+Appendices provide supplementary information including detailed specifications and algorithm pseudocode.
 
-### 2.4 Assessments
+## 1.4 Software Environment
 
-**Tumor Assessments**:
-- CT/MRI scans every 8 weeks (±7 days)
-- Assessed per RECIST 1.1 by independent radiology review
-- Response confirmation required at ≥28 days
+Analysis datasets for STUDY001 were created using R with the **admiral** package from the pharmaverse ecosystem.
 
-**Safety Assessments**:
-- Adverse events (continuous monitoring)
-- Laboratory tests (baseline, then every 4 weeks)
-- Vital signs (each visit)
+**Primary Software**:
+- **R Version**: 4.3.0 (2023-04-21)
+- **Operating System**: Linux Ubuntu 22.04.1 LTS
+- **Key Packages**:
+  - admiral 0.12.0 (ADaM derivations)
+  - metacore 0.1.0 (metadata management)
+  - metatools 0.1.0 (metadata-driven programming)
+  - xportr 0.3.0 (XPT transport file generation)
+  - dplyr 1.1.2 (data manipulation)
+  - lubridate 1.9.2 (date/time handling)
 
----
+**Reproducibility**: Complete package versions are captured in `renv.lock` file in the repository root.
 
-## 3. Analysis Datasets
+**Validation**: R packages used in production have been qualified according to company SOPs. Validation evidence is maintained in `validation/package_validation/`.
 
-### 3.1 ADSL - Subject-Level Analysis Dataset
+## 1.5 Submission Package Contents
 
-**Purpose**: One record per subject with demographics, treatment information, and population flags
+The ADaM analysis datasets for STUDY001 are submitted in **eCTD Module 5.3.5.3** and include:
 
-**Structure**: Basic Data Structure (BDS) - Subject-Level
+- **Analysis Datasets** (SAS XPT v5 format):
+  - adsl.xpt - Subject-Level Analysis Dataset
+  - adrs.xpt - Response Analysis Dataset
+  - adtte.xpt - Time-to-Event Analysis Dataset
 
-**Key Variables**:
-- **Identifiers**: STUDYID, USUBJID, SUBJID, SITEID
-- **Demographics**: AGE, AGEGR1, SEX, RACE, ETHNIC
-- **Treatment**: TRT01P, TRT01A, TRTSDTM, TRTEDTM
-- **Population Flags**: SAFFL, ITTFL, PPSFL
-- **Stratification**: PRIORLNS (prior lines), ECOG0V1
-- **Baseline Disease**: BMMTR1 (baseline tumor measurements)
+- **Metadata Documentation**:
+  - define.xml (Define-XML v2.1)
+  - This ADRG (PDF)
 
-**Record Count**: 850 subjects
+- **Supplementary Materials**:
+  - Dataset specifications (referenced in define.xml)
+  - Controlled terminology (CDISC CT 2023-09-29)
 
-**Source**: Derived from SDTM domains DM, EX, DS
-
-**Program**: `etl/adam_r_admiral/programs/ad_adsl.R`
-
-### 3.2 ADRS - Response Analysis Dataset
-
-**Purpose**: Tumor response assessments and derived endpoints (BOR, ORR, DoR)
-
-**Structure**: Basic Data Structure (BDS) - Occurrence Data
-
-**Key Variables**:
-- **Analysis Parameter**: PARAMCD, PARAM
-  - `OVR`: Overall Response at each visit
-  - `BOR`: Best Overall Response
-  - `CONF`: Confirmed Response
-  - `ORR`: Objective Response Rate (derived flag)
-- **Analysis Value**: AVALC (CR, PR, SD, PD, NE)
-- **Timing**: ADT, ADTM, ADY, AVISIT
-- **Baseline**: BASEC, BASE
-- **Confirmation**: CONFDT (confirmation date for CR/PR)
-
-**Record Count**: ~6,800 records (850 subjects × ~8 assessments)
-
-**Source**: Derived from SDTM RS (Response) domain
-
-**Program**: `etl/adam_r_admiral/programs/ad_adrs.R`
-
-### 3.3 ADTTE - Time-to-Event Analysis Dataset
-
-**Purpose**: Time-to-event endpoints with event/censoring indicators
-
-**Structure**: Basic Data Structure (BDS) - Time-to-Event
-
-**Key Variables**:
-- **Analysis Parameter**: PARAMCD, PARAM
-  - `PFS`: Progression-Free Survival
-  - `OS`: Overall Survival
-  - `TTPR`: Time to Response
-- **Analysis Value**: AVAL (time in days), AVALU ("DAYS")
-- **Event Indicator**: CNSR (0=event, 1=censored)
-- **Event Detail**: EVNTDESC, CNSDTDSC
-- **Start Date**: STARTDT, STARTDTM
-
-**Record Count**: 2,550 records (850 subjects × 3 parameters)
-
-**Source**: Derived from ADRS (for PFS) and DS, AE (for OS)
-
-**Program**: `etl/adam_r_admiral/programs/ad_adtte.R`
+All datasets conform to CDISC ADaM Implementation Guide v1.3 and have been validated using Pinnacle 21 Community (results in validation reports).
 
 ---
 
-## 4. ADaM Conformance
+# 2. Protocol Description
 
-### 4.1 Conformance Self-Assessment
+*[See sections/02_protocol_description.md for detailed content]*
 
-All analysis datasets conform to CDISC ADaM Implementation Guide v1.3:
+Key protocol elements affecting analysis dataset creation:
 
-✓ All required variables present (STUDYID, USUBJID, etc.)
-✓ Variable names comply with ADaM conventions
-✓ Variable labels ≤40 characters
-✓ Analysis flags use "Y"/"N"/null pattern
-✓ Traceability variables included (--SEQ, --DTC)
-✓ One dataset = one analysis purpose
-✓ Structure clearly documented (ADSL vs BDS)
-
-### 4.2 Deviations from ADaM IG
-
-None. All datasets fully conform to ADaM IG v1.3.
+- **Randomization stratification**: Prior lines of therapy (1 vs 2+), ECOG (0 vs 1)
+- **Response assessments**: Every 8 weeks per RECIST 1.1
+- **Primary analysis**: PFS at 350 events using Kaplan-Meier and Cox regression
+- **Safety population**: All subjects receiving ≥1 dose of study treatment
+- **ITT population**: All randomized subjects
 
 ---
 
-## 5. Data Dependencies
+# 3. Analysis Datasets
 
-### 5.1 SDTM to ADaM Traceability
+*[See sections/03_analysis_datasets.md for detailed content]*
 
-#### ADSL Dependencies
-```
-SDTM Domain → ADSL Variables
-DM          → STUDYID, USUBJID, AGE, SEX, RACE, ETHNIC, RFSTDTC, DTHFL
-EX          → TRT01P, TRT01A, TRTSDTM, TRTEDTM, TRTEDT
-DS          → EOSSTT, DCSREAS (disposition status)
-RS          → BMMTR1 (baseline tumor measurement)
-```
+## 3.1 Dataset Summary
 
-#### ADRS Dependencies
-```
-SDTM Domain → ADRS Variables
-RS          → PARAMCD, AVALC (response assessments)
-ADSL        → All subject-level variables merged
-TR          → Tumor measurements (for confirmation logic)
-```
+| Dataset | Structure | Records | Variables | Description |
+|---------|-----------|---------|-----------|-------------|
+| ADSL | Subject-Level | 850 | 45 | Demographics, baseline, treatment, populations |
+| ADRS | BDS (Occurrence) | 7,650 | 38 | Tumor response per RECIST 1.1 |
+| ADTTE | BDS (TTE) | 2,550 | 35 | Time-to-event endpoints (PFS, OS) |
 
-#### ADTTE Dependencies
-```
-Source      → ADTTE Variables
-ADRS        → PFS event dates (progression dates)
-DS          → PFS censoring (treatment discontinuation)
-ADSL        → Subject-level baseline and treatment info
-```
+## 3.2 Dataset Relationships
 
-### 5.2 External Data Sources
+All analysis datasets link via:
+- **STUDYID** = "STUDY001" (constant)
+- **USUBJID** = Unique subject identifier (STUDYID-SITEID-SUBJID format)
 
-No external data sources used. All analysis data derived from SDTM domains collected in the study.
+ADRS and ADTTE reference ADSL for baseline characteristics and population flags.
 
 ---
 
-## 6. Special Variables and Derivations
+# 4. ADaM Conformance
 
-### 6.1 RECIST 1.1 Best Overall Response (BOR)
+*[See sections/04_adam_conformance.md for detailed content]*
 
-**Implementation**: Implemented using `admiral::derive_extreme_event()` with RECIST 1.1 rules
+## 4.1 ADaM Principles Compliance
 
-**Algorithm**:
-1. **CR (Complete Response)**: All target lesions disappeared AND all non-target lesions disappeared AND no new lesions
-   - Requires confirmation ≥28 days later
-2. **PR (Partial Response)**: ≥30% decrease in sum of target lesion diameters AND no new lesions
-   - Requires confirmation ≥28 days later
-3. **SD (Stable Disease)**: Neither PR nor PD criteria met, minimum duration 42 days from baseline
-4. **PD (Progressive Disease)**: ≥20% increase in sum of diameters (and ≥5mm absolute increase) OR new lesions
+STUDY001 analysis datasets adhere to ADaM fundamental principles:
 
-**Code Reference**: `etl/adam_program_library/oncology_response/recist_11_macros.R` lines 45-120
+✅ **Principle 1**: One dataset per analysis subject (ADSL)
+✅ **Principle 2**: Traceability to SDTM (documented in Section 5)
+✅ **Principle 3**: Analysis-ready values (AVAL, AVALC derived)
+✅ **Principle 4**: Clear variable naming and labeling
+✅ **Principle 5**: Standard variables where applicable
+✅ **Principle 6**: Metadata in define.xml
 
-**Confirmation Logic**:
-```r
-# Simplified example
-confirmed_response <- rs_data %>%
-  filter(AVALC %in% c("CR", "PR")) %>%
-  group_by(USUBJID) %>%
-  mutate(
-    NEXT_ADT = lead(ADT),
-    DAYS_TO_CONF = as.numeric(NEXT_ADT - ADT),
-    CONFIRMED = if_else(DAYS_TO_CONF >= 28 & lead(AVALC) == AVALC, "Y", "N")
-  )
+## 4.2 CDISC Standards Used
+
+- **ADaM IG Version**: 1.3 (June 2021)
+- **SDTM IG Version**: 3.4 (November 2022)
+- **Controlled Terminology**: CDISC CT 2023-09-29
+- **Define-XML Version**: 2.1
+
+---
+
+# 5. Data Dependencies and Flow
+
+*[See sections/05_data_dependencies.md for detailed content]*
+
+## 5.1 SDTM to ADaM Traceability
+
 ```
+SDTM Datasets           ADaM Datasets
 
-### 6.2 Progression-Free Survival (PFS)
+DM (Demographics)   ─┐
+EX (Exposure)       ─┼─→  ADSL (Subject-Level)
+DS (Disposition)    ─┘
 
-**Definition**: Time from randomization to disease progression or death from any cause, whichever occurs first
+RS (Response)       ─┐
+TR (Tumor Results)  ─┼─→  ADRS (Response Analysis)
+ADSL               ─┘
 
-**Event Definition**:
-- **Event (CNSR=0)**: Documented disease progression per RECIST 1.1 OR death
-- **Censored (CNSR=1)**: No progression or death observed
-
-**Censoring Rules**:
-1. **Last adequate assessment**: Censored at date of last tumor assessment showing no progression
-2. **New anti-cancer therapy**: Censored at date of last assessment before new therapy
-3. **Withdrew consent**: Censored at date of withdrawal
-4. **Lost to follow-up**: Censored at last known alive date
-
-**Code Reference**: `etl/adam_program_library/time_to_event/derive_pfs.R`
-
-### 6.3 Baseline Tumor Measurements (BMMTR1)
-
-**Derivation**: Sum of target lesion diameters at baseline per RECIST 1.1
-
-**Source**: SDTM TR domain where TRLNKID = "TARGET" and VISIT = "BASELINE"
-
-**Code**:
-```r
-baseline_tumor <- tr %>%
-  filter(TRLNKID == "TARGET", VISIT == "BASELINE") %>%
-  group_by(USUBJID) %>%
-  summarise(BMMTR1 = sum(TRDIAM, na.rm = TRUE))
+ADRS (Progression)  ─┐
+DS (Disposition)    ─┼─→  ADTTE (Time-to-Event)
+AE (Death dates)    ─┤
+ADSL               ─┘
 ```
 
 ---
 
-## 7. Program Inventory
+# 6. Special Variables and Algorithms
 
-### 7.1 ADaM Derivation Programs
+*[See sections/06_special_variables.md for detailed content]*
 
-| Program Name | Purpose | Input Datasets | Output Datasets | QC Program |
-|--------------|---------|----------------|-----------------|------------|
-| `ad_adsl.R` | Derive subject-level dataset | DM, EX, DS, RS | ADSL | `qc_adam_adsl.R` |
-| `ad_adrs.R` | Derive response dataset | RS, TR, ADSL | ADRS | `qc_adam_adrs.R` |
-| `ad_adtte.R` | Derive time-to-event dataset | ADRS, DS, ADSL | ADTTE | `qc_adam_adtte.R` |
+Key complex derivations documented:
 
-### 7.2 Derivation Library Programs
-
-| Program Name | Purpose | Called By |
-|--------------|---------|----------|
-| `recist_11_macros.R` | RECIST 1.1 response derivations | `ad_adrs.R` |
-| `derive_pfs.R` | PFS endpoint derivation | `ad_adtte.R` |
-| `baseline_functions.R` | Baseline value derivations | All ADaM programs |
-
-### 7.3 QC Programs
-
-| QC Program | Validates | Method | Status |
-|------------|-----------|--------|--------|
-| `qc_adam_adsl.R` | ADSL | Independent R derivation | 100% match |
-| `qc_adam_adrs.R` | ADRS | Independent R derivation | 100% match |
-| `qc_adam_adtte.R` | ADTTE | Independent R derivation | 100% match |
-
-### 7.4 Program Execution Order
-
-1. SDTM datasets (input)
-2. `ad_adsl.R` → ADSL
-3. `ad_adrs.R` → ADRS (requires ADSL)
-4. `ad_adtte.R` → ADTTE (requires ADRS, ADSL)
-5. QC programs (parallel validation)
-
-**Master Script**: `run_all.R` executes all programs in correct dependency order
+- **RECIST 1.1 Best Overall Response (BOR)** - Algorithm from Eisenhauer et al. 2009
+- **Response confirmation** - CR/PR confirmed at ≥28 days
+- **Progression-Free Survival (PFS)** - Time to progression or death with censoring rules
+- **Overall Survival (OS)** - Time to death from any cause
+- **Population flags** - SAFFL, ITTFL, PPSFL derivation logic
 
 ---
 
-## Appendices
+# 7. Program Inventory
 
-### Appendix A: Dataset Specifications
+*[See sections/07_program_inventory.md for detailed content]*
 
-See `regulatory_submission/adrg/appendices/A_adam_specification_summary.xlsx` for complete variable-level specifications.
+All programs are maintained in Git version control. Key programs:
 
-### Appendix B: Detailed Derivation Algorithms
+- `etl/adam_r_admiral/programs/ad_adsl.R` - ADSL derivation
+- `etl/adam_r_admiral/programs/ad_adrs.R` - ADRS derivation
+- `etl/adam_r_admiral/programs/ad_adtte.R` - ADTTE derivation
+- `qc/r/adam/qc_adam_*.R` - Independent QC programs
 
-See `regulatory_submission/adrg/appendices/B_derivation_algorithms.md` for step-by-step derivation pseudocode.
+Complete program listings with inputs, outputs, and dependencies provided in Section 7.
 
 ---
 
-## Document History
+# Appendices
 
-| Version | Date | Author | Changes |
-|---------|------|--------|----------|
-| 1.0 | 2025-12-10 | Programming Team | Initial version for submission |
+## Appendix A: ADaM Specification Summary
+
+*[See appendices/A_adam_specification_summary.xlsx]*
+
+Excel workbook containing:
+- Variable-level specifications for all datasets
+- Value-level metadata for coded variables
+- Derivation formulas and origins
+
+## Appendix B: Derivation Algorithms
+
+*[See appendices/B_derivation_algorithms.md]*
+
+Detailed pseudocode for:
+- RECIST 1.1 BOR algorithm
+- PFS censoring rules
+- Response confirmation logic
+- Population flag derivations
 
 ---
 
 **End of ADRG**
+
+---
+
+## Document Approval
+
+| Role | Name | Signature | Date |
+|------|------|-----------|------|
+| Lead Programmer | | | |
+| QC Programmer | | | |
+| Biostatistician | | | |
+| Data Manager | | | |
+
+---
+
+**Note**: This ADRG is part of a demonstration portfolio for clinical programming job applications. While it follows industry standards and best practices, it represents a mock study (STUDY001) and should be adapted for actual submission work.
