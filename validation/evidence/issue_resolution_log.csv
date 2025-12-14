@@ -1,0 +1,4 @@
+Issue_ID,Date_Identified,Test_ID,Issue_Description,Severity,Root_Cause,Resolution,Resolution_Date,Resolved_By,Status,Retest_Required,Retest_Date,Evidence_Path
+ISSUE-001,2025-12-14,OQ-RECIST-001,"Example: PR threshold boundary test failed - expected -30.0%, got -29.98%",Minor,"Floating-point precision in percent change calculation","Updated comparison tolerance from 0.001 to 0.01 in test assertion",2025-12-14,C. Baghai,Closed,Yes,2025-12-14,validation/evidence/issue_001_resolution.txt
+ISSUE-002,,,"[Template] Describe the issue","Critical/Major/Minor","[Root cause analysis]","[How issue was resolved]",,,Open/Closed,Yes/No,,validation/evidence/
+ISSUE-003,,,,,,,,,,,
