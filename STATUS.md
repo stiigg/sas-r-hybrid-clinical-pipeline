@@ -104,22 +104,17 @@ Last Updated: December 11, 2025
 | Component | Status | Notes |
 |-----------|--------|-------|
 | `qc/` directory structure | ✅ Present | QC program templates exist |
-| Comparison logic (R) | ❌ Missing | Need `diffdf` or `arsenal::comparedf()` implementation |
-| Comparison logic (SAS) | ❌ Missing | Need `PROC COMPARE` with discrepancy flagging |
-| Reconciliation reports | ❌ Missing | HTML report generation not implemented |
+| Comparison logic (R) | ✅ Added | `qc/compare_recist_datasets.R` (diffdf-based) |
+| Comparison logic (SAS) | ✅ Added | `qc/compare_recist_datasets.sas` (PROC COMPARE) |
+| Reconciliation reports | ✅ Added | HTML outputs in `qc/outputs/` |
 | QC manifest | 🟡 Referenced | Exists but not validated |
 
-**QC Status**: 🟡 Framework designed | ❌ Automation not implemented
+**QC Status**: 🟡 Framework designed | ✅ Comparison automation in place
 
-**Required Implementation**:
-```r
-# Example comparison framework needed
-library(diffdf)
-prod <- haven::read_sas("outputs/adam/adsl.sas7bdat")
-qc <- haven::read_sas("qc/datasets/adsl.sas7bdat")
-comp <- diffdf(prod, qc, keys = "USUBJID")
-# Generate HTML reconciliation report
-```
+**New QC Tools**:
+- `qc/compare_recist_datasets.sas`: Production vs QC reconciliation with HTML summaries.
+- `qc/compare_recist_datasets.R`: R-based alternative using `diffdf` for RECIST datasets.
+- `qc/cl_overall_response.sas`: Investigator vs algorithm discordance listing (RS vs ADRECIST).
 
 ---
 
@@ -131,6 +126,7 @@ comp <- diffdf(prod, qc, keys = "USUBJID")
 |---------|--------|----------|----------|-------|
 | Demo SDTM RS | ✅ Created | Basic scenarios | 3 | `demo/data/test_sdtm_rs.csv` |
 | Demo expected BOR | ✅ Created | Basic validation | 3 | `demo/data/expected_bor.csv` |
+| Comprehensive SDTM generator | 🟡 Template | Coverage outline | 1 | `tests/data/create_comprehensive_sdtm.sas` (needs population with 20-25 subjects) |
 | Full SDTM suite | ❌ Missing | -- | 0 | Need DM, RS, TU, TR domains |
 | Expected ADaM outputs | ❌ Missing | -- | 0 | Need ADSL, ADRS, ADTTE validation datasets |
 
@@ -349,6 +345,77 @@ comp <- diffdf(prod, qc, keys = "USUBJID")
 
 ---
 
+## Contemporary Research Context (December 2024)
+
+This repository implements RECIST 1.1 (2009) as the regulatory standard. Recent developments:
+
+### Active Research Areas (2024-2025)
+
+**AI-Assisted Measurement**
+- Foundation models: 34.5% accuracy improvement (ASCO 2024)
+- Commercial systems: RSIP Vision, Intrasense Liflow, Mint Medical
+- Friends of Cancer Research ai.RECIST Project launched 2024
+- **Repository Status**: Not implemented (requires DICOM integration)
+
+**Simplified Thresholds**
+- Enaworu 25mm Nadir Rule (April 2025): Single absolute threshold
+- Validation: 255/255 concordance with standard RECIST 1.1 PD classification
+- **Repository Status**: Not implemented (4-6 hour enhancement)
+
+**iRECIST Validation**
+- Advantage demonstrated for anti-CTLA-4 antibodies only
+- No significant benefit for PD-1/PD-L1 inhibitors per 2024 meta-analysis
+- Pseudoprogression biomarkers still lacking
+- **Repository Status**: Code-complete but untested (20-30 hours validation needed)
+
+**Liquid Biopsy Integration (ctDNA-RECIST)**
+- Proposed framework: Collection weeks 2, 4, 8 post-treatment
+- Response criteria: Non-overlapping confidence intervals
+- **Repository Status**: Not implemented (requires custom SDTM domains)
+
+### Known RECIST 1.1 Limitations (UCLA November 2024)
+
+**Inter-Observer Variability**:
+- Different target lesion selection: κ=0.97 → κ=0.58
+- Non-target "unequivocal progression": 28% of PD determinations (subjective)
+- New lesion identification: 50% adjudication discordance
+
+**Proposed Improvements** (not yet adopted):
+1. Increase target lesions from 5 to 10
+2. Quantify non-target with +100% doubling threshold
+3. Require new lesions ≥10mm OR confirmatory growth
+
+**Repository Implementation**: Uses standard RECIST 1.1 (5 lesions, qualitative non-target)
+
+### CDISC ADRECIST v1.0 (September 2024)
+
+**Standard Datasets**:
+- ADTR: Tumor Results (lesion-level)
+- ADRS: Disease Response (visit-level)
+- ADINTEV: Interval Events (new lesions, deaths)
+- ADEFFSUM: Efficacy Summary (BOR, confidence intervals)
+- ADTTE: Time-to-Event (PFS, DoR, OS)
+
+**Repository Alignment**:
+- ✅ ADRECIST structure with horizontal CRIT variables
+- ✅ Confirmation flagging (ANL01FL, ANL02FL)
+- 🟡 ADINTEV partially implemented (new lesion tracking needs expansion)
+- 🟡 ADEFFSUM partially implemented (BOR exists, CIs pending)
+
+### Implementation Priority Matrix
+
+| Feature | Clinical Impact | Implementation Effort | Priority |
+|---------|----------------|----------------------|----------|
+| Fix macro integration | Critical (consistency) | 4-6 hours | **Immediate** |
+| Expand test coverage | High (validation) | 30-38 hours | **High** |
+| QC automation | High (regulatory) | 15-20 hours | **High** |
+| 25mm nadir rule | Medium (optional) | 4-6 hours | Medium |
+| iRECIST validation | Medium (tumor-specific) | 20-30 hours | Medium |
+| AI integration | Low (aspirational) | 60-80 hours | Low |
+| ctDNA integration | Low (non-standard) | 40-50 hours | Low |
+
+---
+
 ## Repository Metrics
 
 ### Code Completion
@@ -360,8 +427,8 @@ comp <- diffdf(prod, qc, keys = "USUBJID")
 | Advanced Endpoints | 2/2 | ~240 | 100% | 0% |
 | Immunotherapy | 2/2 | ~510 | 100% | 0% |
 | Portfolio Orchestration | 5/5 | ~800 | 100% | 50% |
-| QC Framework | 2/5 | ~200 | 40% | 0% |
-| **Total** | **18/21** | **~3,880** | **86%** | **15%** |
+| QC Framework | 4/6 | ~400 | 67% | 0% |
+| **Total** | **20/23** | **~4,080** | **87%** | **15%** |
 
 ### Documentation Completion
 
