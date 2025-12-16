@@ -1,84 +1,126 @@
-# Automation
+# Multi-Study Orchestration (Architectural Design)
 
-The `automation/` directory provides orchestration entry points and shared
-helpers for batch generation tasks. QC logic now lives exclusively under
-`qc/`, while automation focuses on sequencing jobs and coordinating manifests.
+⚠️ **Status: Design concept only - NOT FUNCTIONAL**
 
-## Workflow overview
+This directory contains design templates for multi-study portfolio management and cross-study dependency tracking. This represents **architectural thinking**, not working automation.
 
-```
-┌──────────────────────┐      ┌────────────────────────┐
-│ specs/tlf_shell_map  │ ───▶ │ automation/r/tlf/batch │
-│ specs/etl_manifest   │      │  • manifest reader     │
-│ specs/automation_*   │      │  • batch dispatcher    │
-└──────────────────────┘      │  • logging integration │
-                               └────────┬──────────────┘
-                                        │
-                                        ▼
-                             outputs/tlf/r/gen/** (generation scripts)
-```
+## What's Here
 
-All batch runners call `execute_tlf_manifest()` to standardise logging, error
-handling, and output structures.
+**Orchestration Scripts (Design Templates):**
+- `portfolio_runner.R` - Multi-study execution engine (6.7KB, design template)
+- `dependencies.R` - Cross-study dependency tracker (3.2KB, concept)
+- `change_detection.R` - File hash-based change detection (4.9KB, untested)
+- `run_manifest.R` - Manifest-driven execution (635 bytes, template)
 
-## Runners
+**Supporting Utilities:**
+- `hash_utils.R` - MD5 checksum utilities (568 bytes)
+- `ai_recist_integration.R` - AI integration concept (1KB, placeholder)
 
-| Path | Purpose |
-| --- | --- |
-| `automation/r/tlf/batch/batch_run_all_tlfs.R` | Execute all generation scripts listed in the TLF shell map using manifest-driven orchestration. |
+**Infrastructure Directories:**
+- `automation/r/` - R utility functions (untested)
+- `automation/sas/` - SAS wrapper scripts (untested)
+- `automation/tests/` - Test framework (empty/placeholder)
 
-QC batch execution is now defined in `qc/r/tlf/run_tlf_qc_batch.R` and consumed
-via the QC manifest.
+## What This Would Do (If It Worked)
 
-## Usage
+### Multi-Study Portfolio Execution
 
-Run the generation batch from the repository root:
+```r
+# Theoretical usage (does not work)
+source("automation/portfolio_runner.R")
 
-```bash
-Rscript -e "source('automation/r/tlf/batch/batch_run_all_tlfs.R'); run_all_tlfs()"
+# Would execute STUDY001, STUDY002, STUDY003 in parallel
+run_portfolio(
+  priority_threshold = 1,
+  registry = "studies/portfolio_registry.yml"
+)
 ```
 
-The function returns a `data.frame` containing TLF IDs, statuses, messages,
-and log locations. Generation runs also respect the configuration in
-`specs/tlf/tlf_config.yml`.
+### Cross-Study Dependency Tracking
 
-## Input/output contracts
+```r
+# Theoretical usage (does not work)
+source("automation/dependencies.R")
 
-* **Inputs:** Shell metadata is stored in `specs/tlf/tlf_shell_map.csv`, and
-  configuration (output directories, log locations, tolerances) lives in
-  `specs/tlf/tlf_config.yml`.
-* **Outputs:** Batch runners log to `logs/` and write TLF artifacts under
-  `outputs/tlf/r/output/` by default. Intermediate RDS or CSV artefacts should
-  be stored alongside the generated tables.
-* **R ↔ SAS boundaries:** SAS jobs should export tabular data as CSV (UTF-8,
-  header row included). R scripts should read those CSV files explicitly and
-  emit QC deltas or new datasets following the same convention.
-
-## Tests
-
-Automation-specific smoke tests live in `automation/tests/` and can be executed
-with:
-
-```bash
-Rscript automation/tests/run_tests.R
+# Would identify impact of database lock date changes
+analyze_dependencies(
+  study_id = "STUDY001",
+  new_date = "2025-07-15"
+)
 ```
 
-The checks validate manifest columns, dry-run capabilities, and logging paths
-without requiring SAS tooling.
+### Manifest-Driven QC
 
-## Versioning and governance
+```r
+# Theoretical usage (does not work)
+source("automation/run_manifest.R")
 
-* Update `specs/VERSION.md` when changing manifest schemas or orchestration
-  behaviour.
-* Use semantic commit messages to document automation-level changes.
-* Tag release-ready orchestration changes with `automation-v<major>.<minor>`
-  to keep audit trails aligned with QC releases.
+# Would execute tasks from specs/qc_manifest.csv
+run_from_manifest("specs/qc_manifest.csv")
+```
 
-## Directory boundaries
+## Reality Check
 
-* `automation/` – orchestration, scheduling, manifest plumbing, and cross-cutting
-  helpers.
-* `qc/` – validation logic, QC manifests, and report generation.
+This code demonstrates understanding of:
+- YAML-based study configuration management
+- Priority-based execution queuing
+- Cross-study dependency graphs
+- Manifest-driven orchestration patterns
+- File hash-based change detection
 
-Keeping these boundaries explicit ensures contributors know where to add new
-capabilities and prevents duplicated QC logic.
+**However:** This requires:
+- Multiple real study datasets (don't exist)
+- Portfolio registry with actual studies (mock data only)
+- Study-specific metadata files (templates only)
+- Cross-study dependencies (concept only)
+
+## What This Repository Actually Demonstrates
+
+**Core competency:** RECIST 1.1 implementation for **single-study** clinical programming, not enterprise portfolio orchestration.
+
+**Working code:** [demo/simple_recist_demo.sas](../demo/simple_recist_demo.sas) with 3 test subjects
+
+**Scope:** Tumor response derivations (target lesions, BOR, confirmation logic) following CDISC standards
+
+## Why This Directory Exists
+
+This represents **architectural thinking** about scaling from single-study programming to multi-study portfolio management. It demonstrates:
+- Understanding of clinical trial portfolio complexity
+- Knowledge of orchestration design patterns
+- Familiarity with metadata-driven workflows
+
+**It does NOT demonstrate:** Actual implementation of multi-study automation.
+
+## To Make This Functional
+
+Would require:
+
+1. **Multiple real studies** (20-40 hours)
+   - Create 3 synthetic study datasets
+   - Build study-specific SDTM/ADaM pipelines
+   - Generate realistic metadata files
+
+2. **Working portfolio registry** (4-6 hours)
+   - Replace mock YAML with real study configurations
+   - Define actual dependencies between studies
+   - Specify real database lock dates
+
+3. **Test orchestration logic** (8-12 hours)
+   - Validate priority-based execution
+   - Test dependency tracking
+   - Verify change detection
+
+4. **Build monitoring dashboard** (15-20 hours)
+   - Create timeline visualizations
+   - Implement real-time progress tracking
+   - Add resource utilization metrics
+
+**Total estimated effort:** 50-80 hours
+
+**Note:** This level of complexity is far beyond the scope of demonstrating RECIST 1.1 programming expertise.
+
+---
+
+**Document Purpose:** Portfolio demonstration of architectural design thinking  
+**Implementation Status:** Design concept only  
+**Last Updated:** December 16, 2025
