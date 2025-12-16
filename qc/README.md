@@ -1,99 +1,132 @@
-# Quality Control (QC)
+# QC Framework (Code Exists, Untested)
 
-The `qc/` directory owns all validation logic for the repository. QC execution
-is manifest-driven so every task is discoverable, versioned, and reproducible.
-Automation helpers in `automation/` invoke these entry points but do not
-re-implement QC logic.
+⚠️ **Status: Code complete but NOT TESTED with real data**
 
-## Workflow overview
+This directory contains R and SAS scripts for double-programming QC workflows. The code is syntactically correct but has **not been executed** with actual datasets.
 
+## What's Here
+
+**R-Based QC Scripts:**
+- `compare_datasets.R` - diffdf-based dataset comparison (10.3KB, untested)
+- `run_qc.R` - QC orchestration script (9.6KB, untested)
+- `qc/r/adam/` - ADaM-specific QC functions (untested)
+- `qc/r/tlf/` - TLF QC validation (untested)
+
+**SAS-Based QC Scripts:**
+- `qc/sas/compare_adsl.sas` - PROC COMPARE for ADSL (untested)
+- `qc/sas/compare_adrs.sas` - PROC COMPARE for ADRS (untested)
+- `qc/sas/compare_adtte.sas` - PROC COMPARE for ADTTE (untested)
+- `run_sas_qc.sh` - Shell wrapper for SAS QC execution (3KB, untested)
+
+**Supporting Infrastructure:**
+- `qc/tests/` - Test directory (placeholder, no tests implemented)
+- `qc/reports/` - Empty directory for QC reports (.gitkeep only)
+
+## What This Code Would Do (If It Worked)
+
+### Dual Programming Workflow
+
+1. **Production programmer** creates RECIST derivations in `etl/`
+2. **QC programmer** independently programs same logic
+3. **Automated comparison** flags discrepancies between outputs
+
+### R-Based Comparison (diffdf)
+
+```r
+# Theoretical usage (untested)
+source("qc/compare_datasets.R")
+
+result <- compare_datasets(
+  prod_path = "outputs/adam/adrs.sas7bdat",
+  qc_path = "outputs/qc/adrs.sas7bdat",
+  keys = c("USUBJID", "PARAMCD", "AVISIT")
+)
+
+print(result$summary)  # Would show PASS/FAIL
 ```
-┌────────────────────┐      ┌──────────────────────┐
-│ specs/qc_manifest  │ ───▶ │ qc/run_qc.R          │
-│  • task metadata   │      │  • manifest loader   │
-│  • runner/command  │      │  • task dispatcher   │
-└────────────────────┘      │  • report generator  │
-                            └────────┬─────────────┘
-                                     │
-                                     ▼
-                           qc/r/**            (R + SAS task library)
-```
 
-All QC tasks must be registered in `specs/qc_manifest.csv`. Batch TLF QC is
-implemented in `qc/r/tlf/run_tlf_qc_batch.R` and re-used by the top-level
-runner.
-
-## Usage
-
-Dry runs allow planning the execution order without invoking external tooling:
+### SAS-Based Comparison (PROC COMPARE)
 
 ```bash
-Rscript qc/run_qc.R               # dry run (default)
-QC_DRY_RUN=false Rscript qc/run_qc.R   # execute QC tasks
-Rscript qc/run_qc.R specs/custom_manifest.csv  # alternate manifest
+# Theoretical usage (untested)
+./qc/run_sas_qc.sh
+
+# Would generate:
+# - HTML comparison reports
+# - Discrepancy frequency tables
+# - Pass/fail status
 ```
 
-When execution is enabled the script emits machine-readable artifacts under
-`qc/reports/`:
+## Current Limitation
 
-* `qc_summary_<timestamp>.html` – formatted dashboard of task status, issues,
-  and validation flag.
-* `qc_summary_<timestamp>.txt` – text log for quick inspection or CLI use.
-* `qc_summary_latest.*` – rolling pointers to the most recent report.
+**No QC datasets available.** To test this framework would require:
 
-Issue messages link back to individual task logs (for example, the TLF batch
-runner writes one log per TLF into `logs/`).
+1. Create production ADRS output from demo data
+2. Independently program same derivations
+3. Run comparison scripts
+4. Validate output reports are generated
+5. Verify discrepancies are correctly flagged
 
-## Manifest-driven orchestration
+**Estimated effort:** 10-15 hours to create test datasets and validate comparison outputs.
 
-The manifest defines the runner, language, script path, and description for each
-QC task. Supported runners:
+## For Working QC Validation
 
-| Runner      | Description |
-| ----------- | ----------- |
-| `tlf_batch` | Executes all TLF QC scripts via `run_qc_for_all_tlfs()`. |
-| `rscript`   | Invokes an R script through `Rscript`. |
-| `sas`       | Launches SAS in batch mode (if available on `PATH`). |
+See: [demo/simple_recist_demo.sas](../demo/simple_recist_demo.sas)
 
-Add new QC tasks by appending a row to `specs/qc_manifest.csv`. Keep scripts
-under `qc/r/...` for R or in `qc/sas/...` for SAS and reference the relative
-path in the manifest.
+This includes **embedded QC validation** with 3 test subjects:
 
-## Input/output conventions
+```sas
+/* QC Validation: Verify BOR distribution */
+PROC FREQ DATA=work.bor_results;
+  TABLES BOR / NOCUM;
+  TITLE "QC Check: Best Overall Response Distribution";
+RUN;
 
-* **Inputs:** QC scripts expect analysis-ready datasets in `data/` and metadata
-  from `specs/`. TLF QC receives configuration via `specs/tlf/tlf_config.yml` and
-  `specs/tlf/tlf_shell_map.csv`.
-* **Outputs:** Validation summaries go to `qc/reports/`. Script-level logging
-  writes to `logs/` and should use `tlf_log()` for consistent formatting.
-* **Exchange format:** Use CSV for tabular exchanges between SAS and R, and YAML
-  for configuration. When sharing derived values, prefer tidy column names and
-  include units where relevant.
-
-## Tests
-
-Run QC-focused assertions with:
-
-```bash
-Rscript qc/tests/run_tests.R
+/* Expected output:
+   BOR    Frequency   Percent
+   CR     1           33.33
+   PD     1           33.33
+   PR     1           33.33
+*/
 ```
 
-The test suite validates manifest integrity, ensures dry-run execution of all
-tasks, and verifies the presence of generated reports.
+This is the **only QC validation** currently working in this repository.
 
-## Versioning and change control
+## What This Demonstrates
 
-* Update `specs/VERSION.md` when manifests or orchestration logic change.
-* Tag Git commits that modify QC manifests using `git tag qc-v<major>.<minor>`
-  so historical runs can be reproduced.
-* Document breaking changes in commit messages and README updates.
+Despite being untested, this code demonstrates understanding of:
+- Pharmaceutical double-programming standards
+- R `diffdf` package for dataset comparison
+- SAS PROC COMPARE for numeric/character validation
+- Automated QC report generation
+- Discrepancy investigation workflows
 
-## Contributing
+## To Make Production-Ready
 
-1. Fork or branch from `main`.
-2. Add new QC scripts under `qc/r/` or `qc/sas/`.
-3. Register the task in `specs/qc_manifest.csv`.
-4. Update or create tests in `qc/tests/`.
-5. Run `Rscript qc/run_qc.R` (with and without `QC_DRY_RUN=false`) and
-   `Rscript qc/tests/run_tests.R`.
-6. Submit a PR including updated reports or sample output where appropriate.
+1. **Create test datasets** (3-4 hours)
+   - Generate production ADRS from demo/data/test_sdtm_rs.csv
+   - Independently program QC ADRS
+   - Introduce intentional discrepancies for testing
+
+2. **Execute comparison scripts** (2-3 hours)
+   - Run compare_datasets.R
+   - Run PROC COMPARE scripts
+   - Verify reports are generated correctly
+
+3. **Validate output format** (2-3 hours)
+   - HTML reports render properly
+   - Discrepancies are clearly flagged
+   - Pass/fail logic works correctly
+
+4. **Document QC procedures** (2-3 hours)
+   - Create QC execution guide
+   - Document discrepancy resolution workflow
+   - Add QC sign-off templates
+
+**Total estimated effort:** 10-15 hours
+
+---
+
+**Document Purpose:** Portfolio demonstration of QC framework knowledge  
+**Implementation Status:** Code exists, untested  
+**Last Updated:** December 16, 2025
