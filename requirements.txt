@@ -1,0 +1,37 @@
+# Python Requirements for CDISC 360i Automation Pipeline
+# Install with: pip install -r requirements.txt
+
+# CDISC Open Rules Engine (CORE) for validation
+cdisc-rules-engine>=2.2.0
+
+# ODM/Define-XML generation
+odmlib>=0.2.1
+validators>=0.22.0
+pathvalidate>=3.2.0
+cerberus>=1.3.5
+
+# Data handling and utilities
+pandas>=2.0.0
+numpy>=1.24.0
+pyarrow>=12.0.0  # For Parquet support
+
+# SAS file I/O (for validation comparisons)
+sas7bdat>=2.2.3
+pyreadstat>=1.2.0
+
+# Reporting and logging
+tabulate>=0.9.0
+colorama>=0.4.6
+
+# Date/time handling
+python-dateutil>=2.8.2
+
+# JSON/YAML processing
+PyYAML>=6.0.1
+
+# HTTP utilities (for CDISC API if needed)
+requests>=2.31.0
+
+# Testing (optional but recommended)
+pytest>=7.4.0
+pytest-cov>=4.1.0
