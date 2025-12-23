@@ -1,64 +1,71 @@
 #!/usr/bin/env Rscript
+#=============================================================================
+# PHARMAVERSE PACKAGE INSTALLER
+# Installs all required packages for CDISC 360i automation
+#=============================================================================
 
-# Install pharmaverse packages required for R-only clinical trial programming
-# Run this once before executing the pipeline in non-dry-run mode
+message("Installing pharmaverse packages for CDISC 360i automation...")
 
-# Core pharmaverse packages for SDTM/ADaM creation
-pharmaverse_pkgs <- c(
-  "admiral",        # ADaM dataset derivation
-  "admiralonco",    # Oncology-specific ADaM extensions
-  "metatools",      # Metadata management
-  "metacore",       # Metadata specifications
-  "xportr",         # CDISC XPT file exports
-  "sdtm.oak"        # SDTM domain generation (available on CRAN)
+# Core pharmaverse packages
+core_pkgs <- c(
+  # SDTM automation - THE KEY PACKAGE
+  "sdtm.oak",           # 22 pre-built SDTM algorithms
+  
+  # ADaM automation
+  "admiral",            # Core ADaM functions
+  "admiralonco",        # Oncology-specific (RECIST, BOR, PFS, DoR)
+  
+  # Supporting infrastructure
+  "pharmaversesdtm",    # Test SDTM datasets
+  "pharmaverseadam",    # Test ADaM datasets  
+  "metacore",           # Metadata management
+  "metatools",          # Metadata utilities
+  "xportr",             # XPT creation with validation
+  
+  # Quality & validation
+  "diffdf",             # Dataset comparison for QC
+  "testthat"            # Automated testing
 )
 
-# Supporting tidyverse packages (if not already installed)
-tidyverse_pkgs <- c(
-  "dplyr",
-  "tidyr",
-  "purrr",
-  "readr",
-  "stringr",
-  "tibble",
-  "haven"           # SAS dataset compatibility
+# Additional supporting packages
+support_pkgs <- c(
+  "here",               # Path management
+  "logger",             # Logging
+  "cli",                # CLI interface
+  "haven",              # SAS file I/O
+  "readr",              # CSV reading
+  "dplyr",              # Data manipulation
+  "tidyr",              # Data tidying
+  "lubridate",          # Date handling
+  "stringr",            # String manipulation
+  "purrr",              # Functional programming
+  "rlang",              # R language features
+  "glue"                # String interpolation
 )
 
-# Install function with error handling
-install_safe <- function(pkg) {
+# Shiny dashboard packages
+shiny_pkgs <- c(
+  "shiny",
+  "DT",
+  "ggplot2",
+  "plotly",
+  "scales",
+  "bslib"
+)
+
+all_pkgs <- c(core_pkgs, support_pkgs, shiny_pkgs)
+
+# Install packages
+for (pkg in all_pkgs) {
   if (!requireNamespace(pkg, quietly = TRUE)) {
     message(sprintf("Installing %s...", pkg))
-    tryCatch(
-      install.packages(pkg, repos = "https://cloud.r-project.org"),
-      error = function(e) {
-        warning(sprintf("Failed to install %s: %s", pkg, e$message))
-      }
-    )
+    install.packages(pkg, repos = "https://cloud.r-project.org")
   } else {
-    message(sprintf("%s already installed", pkg))
+    message(sprintf("✓ %s already installed", pkg))
   }
 }
 
-# Install all packages
-message("Installing pharmaverse ecosystem...")
-invisible(lapply(pharmaverse_pkgs, install_safe))
-
-message("Installing supporting tidyverse packages...")
-invisible(lapply(tidyverse_pkgs, install_safe))
-
-message("\nVerifying installations...")
-missing <- c(pharmaverse_pkgs, tidyverse_pkgs)[
-  !vapply(c(pharmaverse_pkgs, tidyverse_pkgs),
-          requireNamespace,
-          logical(1),
-          quietly = TRUE)
-]
-
-if (length(missing) > 0) {
-  warning(sprintf(
-    "The following packages failed to install: %s\n",
-    paste(missing, collapse = ", ")
-  ))
-} else {
-  message("All pharmaverse packages successfully installed!")
-}
+message("\n✅ All pharmaverse packages installed successfully!")
+message("\nNext steps:")
+message("  1. Install Python tools: pip install cdisc-rules-engine odmlib")
+message("  2. Run: ./run_all.R")
