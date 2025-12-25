@@ -1,0 +1,28 @@
+seq,domain,source_var,target_var,transformation_type,transformation_logic,data_type,length,quality_check,cdisc_note
+1,VS,,STUDYID,CONSTANT,"STUDYID='&studyid'",text,20,"not missing(STUDYID)",Required per CDISC IG
+2,VS,,DOMAIN,CONSTANT,"DOMAIN='VS'",text,2,"DOMAIN='VS'",Must equal 'VS'
+3,VS,subject_id,USUBJID,CONCAT,"USUBJID=cats('&studyid','-',strip(subject_id))",text,40,"not missing(USUBJID)",Unique subject identifier
+4,VS,vs_seq,VSSEQ,DIRECT_MAP,"VSSEQ=input(vs_seq,best.)",num,8,"VSSEQ > 0",Sequence number
+5,VS,vs_testcd,VSTESTCD,DIRECT_MAP,"VSTESTCD=upcase(strip(vs_testcd))",text,8,"VSTESTCD in ('SYSBP' 'DIABP' 'PULSE' 'TEMP' 'RESP' 'HEIGHT' 'WEIGHT')",CDISC CT C66741
+6,VS,vs_test,VSTEST,RECODE,"if VSTESTCD='SYSBP' then VSTEST='Systolic Blood Pressure'; else if VSTESTCD='DIABP' then VSTEST='Diastolic Blood Pressure'; else if VSTESTCD='PULSE' then VSTEST='Pulse Rate'; else if VSTESTCD='TEMP' then VSTEST='Temperature'; else if VSTESTCD='RESP' then VSTEST='Respiratory Rate'; else if VSTESTCD='HEIGHT' then VSTEST='Height'; else if VSTESTCD='WEIGHT' then VSTEST='Weight'",text,40,"not missing(VSTEST)",Decode from VSTESTCD
+7,VS,vs_cat,VSCAT,DIRECT_MAP,"VSCAT=propcase(strip(vs_cat))",text,40,,Optional categorization
+8,VS,vs_position,VSPOS,RECODE,"if upcase(strip(vs_position))='SITTING' then VSPOS='SITTING'; else if upcase(strip(vs_position)) in ('SUPINE' 'LYING') then VSPOS='SUPINE'; else if upcase(strip(vs_position))='STANDING' then VSPOS='STANDING'; else VSPOS=''",text,40,"VSPOS in ('SITTING' 'SUPINE' 'STANDING' '')",CDISC CT C71148
+9,VS,vs_result,VSORRES,DIRECT_MAP,"VSORRES=strip(vs_result)",text,20,"not missing(VSORRES)",Original result as collected
+10,VS,vs_result,VSSTRESC,DIRECT_MAP,"VSSTRESC=strip(vs_result)",text,20,"not missing(VSSTRESC)",Standardized result
+11,VS,vs_result,VSSTRESN,DIRECT_MAP,"VSSTRESN=input(vs_result,??best.)",num,8,"VSSTRESN > 0 or missing(VSSTRESN)",Numeric result
+12,VS,vs_unit,VSORRESU,DIRECT_MAP,"VSORRESU=strip(vs_unit)",text,20,"not missing(VSORRESU) or VSTESTCD in ('HEIGHT' 'WEIGHT')",Original units
+13,VS,vs_unit,VSSTRESU,DIRECT_MAP,"VSSTRESU=strip(vs_unit)",text,20,"not missing(VSSTRESU) or VSTESTCD in ('HEIGHT' 'WEIGHT')",Standard units (same as original for VS)
+14,VS,,VSBLFL,BASELINE_FLAG,"test_var=VSTESTCD|dtc_var=VSDTC|ref_start=RFSTDTC|position_var=VSPOS",text,1,"VSBLFL in ('Y' '')",Baseline flag - last pre-RFSTDTC assessment per test/position
+15,VS,visit,VISIT,DIRECT_MAP,"VISIT=propcase(strip(visit))",text,40,"not missing(VISIT)",Visit name
+16,VS,visit_num,VISITNUM,DIRECT_MAP,"VISITNUM=input(visit_num,best.)",num,8,"VISITNUM >= 0",Visit number
+17,VS,vs_date,VSDAT,DIRECT_MAP,"VSDAT=strip(vs_date)",text,10,"length(VSDAT)=10 or missing(VSDAT)",Collection date (partial)
+18,VS,vs_time,VSTIM,DIRECT_MAP,"VSTIM=strip(vs_time)",text,8,"length(VSTIM) in (5 8) or missing(VSTIM)",Collection time HH:MM or HH:MM:SS
+19,VS,,VSDTC,DATE_CONSTRUCT,"if not missing(VSDAT) then VSDTC=cats(VSDAT, case when not missing(VSTIM) then cats('T',VSTIM) else '' end); else VSDTC=''",text,20,"not missing(VSDTC)",ISO 8601 datetime
+20,VS,,VSSTDY,CONDITIONAL,"if not missing(VSDTC) and not missing(RFSTDTC) then do; _vsdt=input(scan(VSDTC,1,'T'),??yymmdd10.); _rfstdt=input(RFSTDTC,??yymmdd10.); if not missing(_vsdt) and not missing(_rfstdt) then VSSTDY=_vsdt-_rfstdt+((_vsdt>=_rfstdt)); else VSSTDY=.; end; else VSSTDY=.",num,8,"VSSTDY ne . or missing(VSDTC) or missing(RFSTDTC)",Study day
+21,VS,,VSENDY,CONDITIONAL,"if not missing(VSDTC) and not missing(RFSTDTC) then do; _vsdt=input(scan(VSDTC,1,'T'),??yymmdd10.); _rfendt=input(RFENDTC,??yymmdd10.); if not missing(_vsdt) and not missing(_rfendt) then VSENDY=_vsdt-_rfendt+((_vsdt>=_rfendt)); else VSENDY=.; end; else VSENDY=.",num,8,,End study day
+22,VS,vs_evaluator,VSEVAL,DIRECT_MAP,"VSEVAL=propcase(strip(vs_evaluator))",text,40,,Evaluator (INVESTIGATOR/INDEPENDENT ASSESSOR)
+23,VS,vs_location,VSLOC,DIRECT_MAP,"VSLOC=propcase(strip(vs_location))",text,40,,Anatomical location
+24,VS,vs_lat,VSLAT,RECODE,"if upcase(strip(vs_lat))='LEFT' then VSLAT='LEFT'; else if upcase(strip(vs_lat))='RIGHT' then VSLAT='RIGHT'; else if upcase(strip(vs_lat))='BILATERAL' then VSLAT='BILATERAL'; else VSLAT=''",text,20,,Laterality (LEFT/RIGHT/BILATERAL)
+25,VS,,EPOCH,DIRECT_MAP,"EPOCH='TREATMENT'",text,40,,Trial epoch (defaulted)
+26,VS,,BMI,CONDITIONAL,"retain _height _weight; if VSTESTCD='HEIGHT' and not missing(VSSTRESN) then _height=VSSTRESN; if VSTESTCD='WEIGHT' and not missing(VSSTRESN) then _weight=VSSTRESN; if not missing(_height) and not missing(_weight) and _height > 0 then BMI=round(_weight/((_height/100)**2),0.1); else BMI=.",num,8,"BMI > 0 or missing(BMI)",Derived BMI (kg/m²) - calculated from HEIGHT and WEIGHT
+27,VS,rfstdtc,RFSTDTC,DIRECT_MAP,"RFSTDTC=strip(rfstdtc)",text,20,"not missing(RFSTDTC)",Reference start date from DM - required for VSBLFL derivation
