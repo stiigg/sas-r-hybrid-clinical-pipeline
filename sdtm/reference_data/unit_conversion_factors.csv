@@ -1,0 +1,32 @@
+LBTESTCD,LBTEST,ORIG_UNIT,TARGET_UNIT,CONVERSION_FACTOR,ADDITIVE_FACTOR,LOINC_CODE,SPECIMEN,NOTES
+ALB,Albumin,g/dL,g/L,10,0,1751-7,SERUM,Conventional to SI (multiply by 10)
+ALT,Alanine Aminotransferase,U/L,U/L,1,0,1742-6,SERUM,Already SI unit - no conversion needed
+AST,Aspartate Aminotransferase,U/L,U/L,1,0,1920-8,SERUM,Already SI unit - no conversion needed
+BILI,Bilirubin,mg/dL,µmol/L,17.1,0,1975-2,SERUM,Conventional to SI (multiply by 17.1)
+BUN,Blood Urea Nitrogen,mg/dL,mmol/L,0.357,0,3094-0,SERUM,Conventional to SI (divide by 2.8)
+CA,Calcium,mg/dL,mmol/L,0.25,0,17861-6,SERUM,Conventional to SI (multiply by 0.25)
+CHOL,Cholesterol,mg/dL,mmol/L,0.0259,0,2093-3,SERUM,Conventional to SI (multiply by 0.0259)
+CK,Creatine Kinase,U/L,U/L,1,0,2157-6,SERUM,Already SI unit - no conversion needed
+CREAT,Creatinine,mg/dL,µmol/L,88.4,0,2160-0,SERUM,Conventional to SI (multiply by 88.4)
+GGT,Gamma Glutamyl Transferase,U/L,U/L,1,0,2324-2,SERUM,Already SI unit - no conversion needed
+GLUC,Glucose,mg/dL,mmol/L,0.0555,0,2345-7,SERUM,Conventional to SI (multiply by 0.0555)
+HCT,Hematocrit,%,proportion,0.01,0,4544-3,WHOLE BLOOD,Convert percentage to proportion
+HGB,Hemoglobin,g/dL,g/L,10,0,718-7,WHOLE BLOOD,Conventional to SI (multiply by 10)
+K,Potassium,mEq/L,mmol/L,1,0,2823-3,SERUM,Already SI unit (mEq/L = mmol/L for K+)
+LDH,Lactate Dehydrogenase,U/L,U/L,1,0,2532-0,SERUM,Already SI unit - no conversion needed
+MG,Magnesium,mg/dL,mmol/L,0.411,0,2601-3,SERUM,Conventional to SI (multiply by 0.411)
+NA,Sodium,mEq/L,mmol/L,1,0,2951-2,SERUM,Already SI unit (mEq/L = mmol/L for Na+)
+PHOS,Phosphate,mg/dL,mmol/L,0.323,0,2777-1,SERUM,Conventional to SI (multiply by 0.323)
+PLAT,Platelet Count,10^3/µL,10^9/L,1,0,777-3,WHOLE BLOOD,Already SI unit - no conversion needed
+RBC,Red Blood Cell Count,10^6/µL,10^12/L,1,0,789-8,WHOLE BLOOD,Already SI unit - no conversion needed
+TG,Triglycerides,mg/dL,mmol/L,0.0113,0,2571-8,SERUM,Conventional to SI (multiply by 0.0113)
+URIC,Uric Acid,mg/dL,µmol/L,59.48,0,3084-1,SERUM,Conventional to SI (multiply by 59.48)
+WBC,White Blood Cell Count,10^3/µL,10^9/L,1,0,6690-2,WHOLE BLOOD,Already SI unit - no conversion needed
+BASO,Basophils,%,proportion,0.01,0,705-4,WHOLE BLOOD,Convert percentage to proportion
+EOS,Eosinophils,%,proportion,0.01,0,713-8,WHOLE BLOOD,Convert percentage to proportion
+LYMPH,Lymphocytes,%,proportion,0.01,0,736-9,WHOLE BLOOD,Convert percentage to proportion
+MONO,Monocytes,%,proportion,0.01,0,5905-5,WHOLE BLOOD,Convert percentage to proportion
+NEUT,Neutrophils,%,proportion,0.01,0,770-8,WHOLE BLOOD,Convert percentage to proportion
+APTT,Activated Partial Thromboplastin Time,sec,sec,1,0,3173-2,PLASMA,Already SI unit - no conversion needed
+INR,International Normalized Ratio,ratio,ratio,1,0,6301-6,PLASMA,Dimensionless ratio - no conversion needed
+PT,Prothrombin Time,sec,sec,1,0,5902-2,PLASMA,Already SI unit - no conversion needed

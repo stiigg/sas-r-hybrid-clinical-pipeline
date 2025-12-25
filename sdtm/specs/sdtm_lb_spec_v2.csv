@@ -1,0 +1,33 @@
+seq,domain,source_var,target_var,transformation_type,transformation_logic,data_type,length,quality_check,cdisc_note
+1,LB,,STUDYID,CONSTANT,STUDYID="&studyid",char,20,not_missing,Study Identifier
+2,LB,,DOMAIN,CONSTANT,DOMAIN="LB",char,2,not_missing,Domain Abbreviation
+3,LB,subjid,USUBJID,CONCAT,USUBJID=cats("&studyid",'-',strip(subjid)),char,40,not_missing,Unique Subject Identifier
+4,LB,lb_seq,LBSEQ,DIRECT_MAP,LBSEQ=input(lb_seq,best.),num,8,not_missing,Sequence Number
+5,LB,lab_test,LBTESTCD,DIRECT_MAP,LBTESTCD=upcase(strip(lab_test)),char,8,not_missing,Lab Test Short Name
+6,LB,lab_test,LBTEST,RECODE,"if upcase(lab_test)='ALT' then LBTEST='Alanine Aminotransferase'; else if upcase(lab_test)='AST' then LBTEST='Aspartate Aminotransferase'; else if upcase(lab_test)='BILI' then LBTEST='Bilirubin'; else if upcase(lab_test)='CREAT' then LBTEST='Creatinine'; else if upcase(lab_test)='HGB' then LBTEST='Hemoglobin'; else if upcase(lab_test)='WBC' then LBTEST='White Blood Cell Count'; else if upcase(lab_test)='PLAT' then LBTEST='Platelet Count'; else if upcase(lab_test)='ALB' then LBTEST='Albumin'; else if upcase(lab_test)='GLUC' then LBTEST='Glucose'; else LBTEST=propcase(lab_test);",char,40,not_missing,Lab Test Name
+7,LB,lab_cat,LBCAT,DIRECT_MAP,LBCAT=upcase(strip(lab_cat)),char,40,not_missing,Category for Lab Test
+8,LB,specimen_type,LBSPEC,DIRECT_MAP,LBSPEC=upcase(strip(specimen_type)),char,20,,Specimen Type
+9,LB,lab_result,LBORRES,DIRECT_MAP,LBORRES=strip(lab_result),char,20,not_missing,Result or Finding in Original Units
+10,LB,lab_unit,LBORRESU,DIRECT_MAP,LBORRESU=strip(lab_unit),char,20,not_missing,Original Units
+11,LB,lab_result,LBSTRESC,DIRECT_MAP,LBSTRESC=strip(lab_result),char,20,not_missing,Character Result in Std Format
+12,LB,lab_result,LBSTRESN,UNIT_CONVERSION,"lookup_file=unit_conversion_factors.csv|test_var=LBTESTCD|unit_var=LBORRESU|result_var=LBORRES",num,8,not_missing,Numeric Result in Standard Units
+13,LB,,LBSTRESU,CONDITIONAL,"if not missing(LBSTRESN_UNIT) then LBSTRESU=LBSTRESN_UNIT; else LBSTRESU=LBORRESU;",char,20,not_missing,Standard Units
+14,LB,,LBSTNRLO,REFERENCE_DATA_LOOKUP,"lookup_file=lab_reference_ranges.csv|join_keys=LBTESTCD,SEX|target_vars=LBSTNRLO,LBSTNRHI,LBSTNRC",num,8,,Reference Range Lower Limit in Std Units
+15,LB,,LBSTNRHI,CONDITIONAL,"/* Populated via REFERENCE_DATA_LOOKUP in row 14 */",num,8,,Reference Range Upper Limit in Std Units
+16,LB,,LBSTNRC,CONDITIONAL,"if not missing(LBSTRESN) and not missing(LBSTNRLO) and not missing(LBSTNRHI) then do; if LBSTRESN < LBSTNRLO then LBSTNRC='LOW'; else if LBSTRESN > LBSTNRHI then LBSTNRC='HIGH'; else LBSTNRC='NORMAL'; end;",char,20,,Reference Range for Char Result in Std Units
+17,LB,lab_date,LBDTC,DATE_CONVERT,"if not missing(lab_date) then LBDTC=put(input(lab_date,yymmdd10.),e8601da.); else LBDTC='';",char,20,not_missing,Date/Time of Specimen Collection
+18,LB,visit_num,VISITNUM,DIRECT_MAP,VISITNUM=input(visit_num,best.),num,8,not_missing,Visit Number
+19,LB,visit_name,VISIT,DIRECT_MAP,VISIT=strip(visit_name),char,40,not_missing,Visit Name
+20,LB,lab_date,LBDTC_TEMP,DATE_CONVERT,"_lbdtc_temp=input(lab_date,?? yymmdd10.);",num,8,,Temporary date for LBDY calculation
+21,LB,,LBDY,CONDITIONAL,"if not missing(_lbdtc_temp) and not missing(input(RFSTDTC,?? e8601da.)) then do; if _lbdtc_temp >= input(RFSTDTC,?? e8601da.) then LBDY=_lbdtc_temp - input(RFSTDTC,?? e8601da.) + 1; else LBDY=_lbdtc_temp - input(RFSTDTC,?? e8601da.); end; else LBDY=.;",num,8,,Study Day of Specimen Collection
+22,LB,,LBLBLFL,BASELINE_FLAG,"test_var=LBTESTCD|dtc_var=LBDTC|ref_start=RFSTDTC|position_var=",char,1,,Baseline Flag
+23,LB,fasting_status,LBFAST,DIRECT_MAP,LBFAST=upcase(strip(fasting_status)),char,1,,Fasting Status
+24,LB,lab_reason,LBSTAT,CONDITIONAL,"if not missing(lab_reason) then LBSTAT='NOT DONE'; else LBSTAT='';",char,20,,Completion Status
+25,LB,lab_reason,LBREASND,DIRECT_MAP,LBREASND=strip(lab_reason),char,200,,Reason Test Not Done
+26,LB,,EPOCH,CONDITIONAL,"if VISITNUM=1 then EPOCH='SCREENING'; else if VISITNUM in (2,3,4,5,6) then EPOCH='TREATMENT'; else if VISITNUM=99 then EPOCH='FOLLOW-UP'; else EPOCH='';",char,20,,Epoch
+27,LB,sex,SEX,DIRECT_MAP,SEX=upcase(strip(sex)),char,1,,Sex for reference range lookup
+28,LB,sex,RFSTDTC,DIRECT_MAP,/* Merged from DM domain */,char,20,,Reference Start Date from DM
+29,LB,,LLOQ_FLAG,CONDITIONAL,"if index(upcase(LBORRES),'<') > 0 then do; LBSTRESC=strip(LBORRES); LBSTRESN=input(compress(LBORRES,'<'),?? best.)/2; end;",char,1,,Handle Below LLOQ values
+30,LB,,_DROP_VARS,CONDITIONAL,"drop _lbdtc_temp LBSTRESN_UNIT;",char,1,,Variables to drop
+31,LB,,UNIT_CHECK,CONDITIONAL,"if missing(LBORRESU) then put 'WARNING: Missing units for ' LBTESTCD= USUBJID= VISIT=;",char,1,,QC check for units
+32,LB,,RANGE_CHECK,CONDITIONAL,"if not missing(LBSTRESN) and missing(LBSTNRC) then put 'WARNING: Could not determine reference range for ' LBTESTCD= USUBJID= SEX=;",char,1,,QC check for reference ranges

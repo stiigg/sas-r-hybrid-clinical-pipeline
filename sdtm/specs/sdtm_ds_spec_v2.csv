@@ -1,0 +1,13 @@
+seq,source_dataset,source_var,target_domain,target_var,target_type,target_length,transformation_type,transformation_logic,ct_codelist,quality_check,comments
+1,METADATA,,DS,STUDYID,Char,20,CONSTANT,STUDYID="&studyid",,NOT_NULL,Study identifier from macro variable
+2,CONSTANT,,DS,DOMAIN,Char,2,CONSTANT,DOMAIN="DS",Domain Code,EXACT_VALUE,Always DS for disposition
+3,RAW.DISPOSITION,subject_id,DS,USUBJID,Char,40,CONCAT,"catx('-','&studyid',put(site_id,z3.),subject_id)",,NOT_NULL,Unique subject identifier
+4,RAW.DISPOSITION,disposition_seq,DS,DSSEQ,Num,8,DIRECT_MAP,DSSEQ=disposition_seq,,NOT_NULL;SEQUENCE,Sequence number per subject
+5,RAW.DISPOSITION,disposition_term,DS,DSTERM,Char,200,DIRECT_MAP,DSTERM=disposition_term,,NOT_NULL,Verbatim disposition reason
+6,RAW.DISPOSITION,disposition_term,DS,DSDECOD,Char,200,RECODE,"case(upcase(disposition_term)) when('COMPLETED STUDY') then 'COMPLETED' when('ADVERSE EVENT','WITHDREW DUE TO AE') then 'ADVERSE EVENT' when('WITHDREW CONSENT','SUBJECT WITHDREW') then 'WITHDRAWAL BY SUBJECT' when('LOST TO FOLLOW UP') then 'LOST TO FOLLOW-UP' when('DEATH','DIED') then 'DEATH' when('PROTOCOL VIOLATION') then 'PROTOCOL DEVIATION' when('SCREEN FAILURE') then 'SCREEN FAILURE' else 'OTHER' end",Non-Completion,CONTROLLED_TERM,Standardized disposition code per CDISC CT
+7,CONSTANT,,DS,DSCAT,Char,40,CONSTANT,DSCAT="DISPOSITION EVENT",Category for DS,EXACT_VALUE,Fixed category for all DS records
+8,RAW.DISPOSITION,visit_name,DS,DSSCAT,Char,40,RECODE,"case(upcase(visit_name)) when('SCREENING','SCREEN') then 'SCREENING' when('TREATMENT','BASELINE','WEEK 1','WEEK 4','WEEK 8') then 'TREATMENT' when('FOLLOW-UP','FU') then 'FOLLOW-UP' else 'OTHER' end",Subcategory for DS,CONTROLLED_TERM,Subcategory based on study phase
+9,RAW.DISPOSITION,visit_name,DS,EPOCH,Char,40,RECODE,"case(upcase(visit_name)) when('SCREENING','SCREEN') then 'SCREENING' when('TREATMENT','BASELINE','WEEK 1','WEEK 4','WEEK 8') then 'TREATMENT' when('FOLLOW-UP','FU') then 'FOLLOW-UP' else 'NOT ASSIGNED' end",Trial Epoch,CONTROLLED_TERM,Epoch derived from visit context
+10,RAW.DISPOSITION,disposition_date,DS,DSSTDTC,Char,19,DATE_CONVERT,"put(input(disposition_date,anydtdte.),is8601dt.)",,ISO8601_DATETIME,Start date of disposition event
+11,RAW.DISPOSITION,disposition_date,DS,DSDTC,Char,19,DATE_CONVERT,"put(input(disposition_date,anydtdte.),is8601dt.)",,ISO8601_DATETIME,Date of disposition event (same as DSSTDTC for point events)
+12,DERIVED,"DSSTDTC,RFSTDTC",DS,DSSTDY,Num,8,STUDY_DAY,"if DSSTDTC ne '' and RFSTDTC ne '' then DSSTDY=input(DSSTDTC,yymmdd10.)-input(RFSTDTC,yymmdd10.)+1*(input(DSSTDTC,yymmdd10.)>=input(RFSTDTC,yymmdd10.))",,RANGE:-999-9999,Study day calculation from reference start date
