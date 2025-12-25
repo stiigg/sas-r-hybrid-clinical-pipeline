@@ -1,0 +1,13 @@
+subject_id,site_id,dob_year,dob_month,dob_day,age_years,sex,race_white,race_black,race_asian,race_native_american,race_pacific_islander,ethnicity,consent_date,rand_arm,country,first_dose_date,last_dose_date
+001,101,1956,3,15,67,Male,1,0,0,0,0,Not Hispanic or Latino,01-FEB-2024,1,USA,10-FEB-2024,15-AUG-2024
+002,101,1962,8,22,61,Female,0,1,0,0,0,Not Hispanic or Latino,03-FEB-2024,2,USA,12-FEB-2024,20-JUL-2024
+003,102,1954,11,30,69,Male,0,0,1,0,0,Not Hispanic or Latino,04-FEB-2024,1,USA,13-FEB-2024,30-MAY-2024
+004,102,1965,3,18,59,Female,1,0,0,0,0,Hispanic or Latino,06-FEB-2024,2,USA,15-FEB-2024,30-AUG-2024
+005,201,1958,9,5,65,Male,0,0,1,0,0,Not Hispanic or Latino,08-FEB-2024,1,CAN,17-FEB-2024,20-AUG-2024
+006,201,1968,12,12,55,Female,1,0,0,0,0,Not Hispanic or Latino,09-FEB-2024,2,CAN,18-FEB-2024,25-AUG-2024
+007,301,1971,4,7,52,Male,1,0,0,0,0,Not Hispanic or Latino,11-FEB-2024,1,GBR,20-FEB-2024,28-AUG-2024
+008,301,1960,6,25,63,Female,1,0,0,0,0,Not Hispanic or Latino,13-FEB-2024,2,GBR,22-FEB-2024,30-AUG-2024
+009,102,1975,1,19,48,Male,1,1,0,0,0,Hispanic or Latino,14-FEB-2024,1,USA,19-FEB-2024,25-AUG-2024
+010,101,1963,7,30,60,Female,0,0,0,1,0,Not Hispanic or Latino,15-FEB-2024,2,USA,20-FEB-2024,27-AUG-2024
+011,103,1970,2,14,54,Male,0,0,1,0,0,Not Hispanic or Latino,16-FEB-2024,1,USA,21-FEB-2024,28-AUG-2024
+012,103,1959,10,8,64,Female,1,0,0,0,0,Not Hispanic or Latino,17-FEB-2024,2,USA,22-FEB-2024,29-AUG-2024
