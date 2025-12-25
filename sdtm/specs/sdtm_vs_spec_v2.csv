@@ -1,26 +1,28 @@
 seq,domain,source_var,target_var,transformation_type,transformation_logic,data_type,length,quality_check,cdisc_note
-1,VS,,STUDYID,CONSTANT,STUDYID="&studyid",char,20,not_missing,Study Identifier
-2,VS,,DOMAIN,CONSTANT,DOMAIN="VS",char,2,not_missing,Domain Abbreviation
-3,VS,subjid,USUBJID,CONCAT,USUBJID=cats("&studyid",'-',strip(subjid)),char,40,not_missing,Unique Subject Identifier
-4,VS,vs_seq,VSSEQ,DIRECT_MAP,VSSEQ=input(vs_seq,best.),num,8,not_missing,Sequence Number
-5,VS,vs_test,VSTESTCD,DIRECT_MAP,VSTESTCD=upcase(strip(vs_test)),char,8,not_missing,Vital Signs Test Short Name
-6,VS,vs_test,VSTEST,RECODE,"if upcase(vs_test)='SYSBP' then VSTEST='Systolic Blood Pressure'; else if upcase(vs_test)='DIABP' then VSTEST='Diastolic Blood Pressure'; else if upcase(vs_test)='PULSE' then VSTEST='Pulse Rate'; else if upcase(vs_test)='TEMP' then VSTEST='Temperature'; else if upcase(vs_test)='RESP' then VSTEST='Respiratory Rate'; else if upcase(vs_test)='HEIGHT' then VSTEST='Height'; else if upcase(vs_test)='WEIGHT' then VSTEST='Weight'; else VSTEST=propcase(vs_test);",char,40,not_missing,Vital Signs Test Name
-7,VS,vs_pos,VSPOS,DIRECT_MAP,VSPOS=upcase(strip(vs_pos)),char,20,,Position of Subject
-8,VS,vs_result,VSORRES,DIRECT_MAP,VSORRES=strip(vs_result),char,20,not_missing,Result or Finding in Original Units
-9,VS,vs_result,VSORRESU,DIRECT_MAP,VSORRESU=strip(vs_unit),char,20,not_missing,Original Units
-10,VS,vs_result,VSSTRESC,DIRECT_MAP,VSSTRESC=strip(vs_result),char,20,not_missing,Character Result/Finding in Std Format
-11,VS,vs_result,VSSTRESN,DIRECT_MAP,VSSTRESN=input(vs_result,?? best.),num,8,not_missing,Numeric Result/Finding in Standard Units
-12,VS,vs_unit,VSSTRESU,DIRECT_MAP,VSSTRESU=strip(vs_unit),char,20,not_missing,Standard Units
-13,VS,vs_location,VSLOC,DIRECT_MAP,VSLOC=upcase(strip(vs_location)),char,20,,Location of Vital Signs Measurement
-14,VS,vs_date,VSDTC,DATE_CONVERT,"if not missing(vs_date) then VSDTC=put(input(vs_date,yymmdd10.),e8601da.); else VSDTC='';",char,20,not_missing,Date/Time of Vital Signs
-15,VS,visit_num,VISITNUM,DIRECT_MAP,VISITNUM=input(visit_num,best.),num,8,not_missing,Visit Number
-16,VS,visit_name,VISIT,DIRECT_MAP,VISIT=strip(visit_name),char,40,not_missing,Visit Name
-17,VS,vs_date,VSDTC_TEMP,DATE_CONVERT,"_vsdtc_temp=input(vs_date,?? yymmdd10.);",num,8,,Temporary date for VSDY calculation
-18,VS,,VSDY,CONDITIONAL,"if not missing(_vsdtc_temp) and not missing(input(RFSTDTC,?? e8601da.)) then do; if _vsdtc_temp >= input(RFSTDTC,?? e8601da.) then VSDY=_vsdtc_temp - input(RFSTDTC,?? e8601da.) + 1; else VSDY=_vsdtc_temp - input(RFSTDTC,?? e8601da.); end; else VSDY=.;",num,8,,Study Day of Vital Signs
-19,VS,,VSBLFL,BASELINE_FLAG,"test_var=VSTESTCD|dtc_var=VSDTC|ref_start=RFSTDTC|position_var=VSPOS",char,1,,Baseline Flag
-20,VS,vs_reason,VSSTAT,CONDITIONAL,"if not missing(vs_reason) then VSSTAT='NOT DONE'; else VSSTAT='';",char,20,,Completion Status
-21,VS,vs_reason,VSREASND,DIRECT_MAP,VSREASND=strip(vs_reason),char,200,,Reason Not Done
-22,VS,,EPOCH,CONDITIONAL,"if VISITNUM=1 then EPOCH='SCREENING'; else if VISITNUM in (2,3,4,5,6) then EPOCH='TREATMENT'; else if VISITNUM=99 then EPOCH='FOLLOW-UP'; else EPOCH='';",char,20,,Epoch
-23,VS,subjid,_TEMP_SUBJID,DIRECT_MAP,_TEMP_SUBJID=strip(subjid),char,20,,Temp variable for BMI calculation
-24,VS,,_DROP_VARS,CONDITIONAL,"drop _vsdtc_temp _TEMP_SUBJID;",char,1,,Variables to drop
-25,VS,,VSORRESU_CHECK,CONDITIONAL,"if VSTESTCD in ('HEIGHT','WEIGHT') and missing(VSORRESU) then put 'WARNING: Missing units for ' VSTESTCD= USUBJID=;",char,1,,QC check for required units
+1,VS,,STUDYID,CONSTANT,STUDYID="&studyid",Char,12,NOT_NULL,Required SDTM identifier variable
+2,VS,,DOMAIN,CONSTANT,DOMAIN="VS",Char,2,NOT_NULL,Two-character domain code
+3,VS,subject_id,USUBJID,CONCAT,USUBJID=cats("&studyid","-",strip(site_id),"-",strip(subject_id)),Char,40,NOT_NULL,Unique subject identifier
+4,VS,vs_seq,VSSEQ,DIRECT_MAP,VSSEQ=vs_seq,Num,8,NOT_NULL,Sequence number
+5,VS,test_name,VSTESTCD,RECODE,"if upcase(test_name)='SYSTOLIC BP' then VSTESTCD='SYSBP'; else if upcase(test_name)='DIASTOLIC BP' then VSTESTCD='DIABP'; else if upcase(test_name)='PULSE' then VSTESTCD='PULSE'; else if upcase(test_name)='TEMPERATURE' then VSTESTCD='TEMP'; else if upcase(test_name)='RESPIRATORY RATE' then VSTESTCD='RESP'; else if upcase(test_name)='WEIGHT' then VSTESTCD='WEIGHT'; else if upcase(test_name)='HEIGHT' then VSTESTCD='HEIGHT'; else VSTESTCD=upcase(test_name)",Char,8,NOT_NULL,CDISC controlled terminology
+6,VS,test_name,VSTEST,RECODE,"if upcase(test_name)='SYSTOLIC BP' then VSTEST='Systolic Blood Pressure'; else if upcase(test_name)='DIASTOLIC BP' then VSTEST='Diastolic Blood Pressure'; else if upcase(test_name)='PULSE' then VSTEST='Pulse Rate'; else if upcase(test_name)='TEMPERATURE' then VSTEST='Temperature'; else if upcase(test_name)='RESPIRATORY RATE' then VSTEST='Respiratory Rate'; else if upcase(test_name)='WEIGHT' then VSTEST='Weight'; else if upcase(test_name)='HEIGHT' then VSTEST='Height'; else VSTEST=propcase(test_name)",Char,40,NOT_NULL,Test name in standard format
+7,VS,position,VSPOS,DIRECT_MAP,VSPOS=upcase(position),Char,20,OPTIONAL,Position during measurement (SITTING/SUPINE/STANDING)
+8,VS,result,VSORRES,DIRECT_MAP,VSORRES=strip(put(result,best12.)),Char,20,NOT_NULL,Result as collected
+9,VS,result,VSSTRESC,DIRECT_MAP,VSSTRESC=strip(put(result,best12.)),Char,20,NOT_NULL,Standardized character result
+10,VS,result,VSSTRESN,DIRECT_MAP,VSSTRESN=result,Num,8,NUMERIC_ONLY,Standardized numeric result
+11,VS,unit,VSORRESU,DIRECT_MAP,VSORRESU=upcase(unit),Char,20,NOT_NULL,Original unit
+12,VS,unit,VSSTRESU,DIRECT_MAP,VSSTRESU=upcase(unit),Char,20,NOT_NULL,Standard unit
+13,VS,,VSBLFL,BASELINE_FLAG,test_var=VSTESTCD|dtc_var=VSDTC|ref_start=RFSTDTC|position_var=VSPOS,Char,1,OPTIONAL,Baseline flag (Y if baseline assessment)
+14,VS,visit_name,VISIT,DIRECT_MAP,VISIT=upcase(visit_name),Char,40,NOT_NULL,Visit name
+15,VS,visit_num,VISITNUM,DIRECT_MAP,VISITNUM=visit_num,Num,8,NOT_NULL,Visit number
+16,VS,vs_date,VSDTC,DATE_CONVERT,"if not missing(vs_date) then VSDTC=put(vs_date,yymmdd10.); if not missing(vs_time) then VSDTC=catx('T',VSDTC,put(vs_time,time8.))",Char,20,NOT_NULL,Date/time of assessment (ISO 8601)
+17,VS,vs_date,VSDY,CONDITIONAL,"if not missing(vs_date) and not missing(RFSTDTC) then do; if vs_date >= input(RFSTDTC,yymmdd10.) then VSDY=(vs_date - input(RFSTDTC,yymmdd10.)) + 1; else VSDY=vs_date - input(RFSTDTC,yymmdd10.); end",Num,8,NUMERIC_ONLY,Study day of assessment
+18,VS,,EPOCH,CONDITIONAL,"if VSDY < 1 then EPOCH='SCREENING'; else if VSDY >= 1 and VSDY <= 84 then EPOCH='TREATMENT'; else EPOCH='FOLLOW-UP'",Char,20,NOT_NULL,Epoch of assessment
+19,VS,performer,VSEVAL,DIRECT_MAP,VSEVAL=propcase(performer),Char,40,OPTIONAL,Evaluator (INVESTIGATOR/INDEPENDENT ASSESSOR)
+20,VS,,VSLOC,CONDITIONAL,"if VSTESTCD in ('SYSBP' 'DIABP' 'PULSE') then VSLOC='ARM'; else if VSTESTCD='TEMP' then VSLOC='ORAL'; else VSLOC=''",Char,20,OPTIONAL,Location of measurement
+21,VS,fasting_status,VSFAST,DIRECT_MAP,"if not missing(fasting_status) then VSFAST=upcase(fasting_status)",Char,1,OPTIONAL,Fasting status (Y/N)
+22,VS,exclude_flag,VSEXCLFL,DIRECT_MAP,"if not missing(exclude_flag) then VSEXCLFL=upcase(exclude_flag)",Char,1,OPTIONAL,Exclusion flag
+23,VS,reason_excluded,VSREASEX,DIRECT_MAP,"if not missing(reason_excluded) then VSREASEX=propcase(reason_excluded)",Char,200,OPTIONAL,Reason for exclusion
+24,VS,stat,VSSTAT,CONDITIONAL,"if missing(result) then VSSTAT='NOT DONE'; else VSSTAT=''",Char,20,OPTIONAL,Completion status
+25,VS,reason_nd,VSREASND,CONDITIONAL,"if VSSTAT='NOT DONE' and not missing(reason_nd) then VSREASND=propcase(reason_nd)",Char,200,OPTIONAL,Reason not done
+26,VS,timepoint,VSTPT,DIRECT_MAP,"if not missing(timepoint) then VSTPT=upcase(timepoint)",Char,40,OPTIONAL,Planned time point name
+27,VS,tpt_num,VSTPTNUM,DIRECT_MAP,"if not missing(tpt_num) then VSTPTNUM=tpt_num",Num,8,NUMERIC_ONLY,Planned time point number
