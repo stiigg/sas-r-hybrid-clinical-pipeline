@@ -335,3 +335,51 @@ quit;
    - Include version in filename (sdtm_dm_spec_v2.csv)
    - Track changes in Git
    - Document rationale for changes
+
+## Advanced Transformation Types (v2.1)
+
+### BASELINE_FLAG
+Derives baseline flags (VSBLFL, LBLFL, EGBLFL) using 3-step algorithm:
+1. Subset records ≤ RFSTDTC
+2. Identify MAX(date+time) per test/position
+3. Flag matching records with 'Y'
+
+**Usage in Spec:**
+```
+seq,target_var,transformation_type,transformation_logic
+26,VSBLFL,BASELINE_FLAG,test_var=VSTESTCD|dtc_var=VSDTC|ref_start=RFSTDTC|position_var=VSPOS
+```
+
+**Logic Flow:**
+```
+Input: All VS records for USUBJID=001, VSTESTCD=SYSBP, VSPOS=SITTING
+   2024-01-10 09:00 → Eligible (before RFSTDTC)
+   2024-01-14 14:30 → Eligible (before RFSTDTC)  
+   2024-01-15 09:00 → Eligible (equal to RFSTDTC) ← LATEST
+   2024-01-16 10:00 → Not eligible (after RFSTDTC)
+Output: Only 2024-01-15 09:00 gets VSBLFL='Y'
+```
+
+### UNIT_CONVERSION
+Converts laboratory results from collected units to standard units (typically SI).
+
+**Requires:** `unit_conversion_factors.csv` in reference_data/
+
+**Usage in Spec:**
+```
+seq,target_var,transformation_type,transformation_logic
+15,LBSTRESN,UNIT_CONVERSION,lookup_file=unit_conversion_factors.csv|test_var=LBTESTCD|unit_var=LBORRESU|result_var=LBORRES
+```
+
+**Example Conversions:**
+- Glucose: 100 mg/dL → 5.55 mmol/L (factor: 0.0555)
+- Creatinine: 1.2 mg/dL → 106 µmol/L (factor: 88.4)
+
+### REFERENCE_DATA_LOOKUP
+Joins external reference tables (e.g., lab normal ranges by age/sex).
+
+**Usage in Spec:**
+```
+seq,target_var,transformation_type,transformation_logic
+20,LBSTNRLO|LBSTNRHI,REFERENCE_DATA_LOOKUP,lookup_file=lab_reference_ranges.csv|join_keys=LBTESTCD,SEX,AGE|target_vars=LBSTNRLO,LBSTNRHI,LBSTNRC
+```
