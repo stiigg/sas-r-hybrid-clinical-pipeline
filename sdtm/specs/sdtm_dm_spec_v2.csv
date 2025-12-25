@@ -1,0 +1,18 @@
+seq,source_dataset,source_var,target_domain,target_var,target_type,target_length,transformation_type,transformation_logic,ct_codelist,quality_check,comments
+1,METADATA,,DM,STUDYID,Char,20,CONSTANT,STUDYID="&studyid",,NOT_NULL,Study identifier from macro variable
+2,CONSTANT,,DM,DOMAIN,Char,2,CONSTANT,DOMAIN="DM",Domain Code,EXACT_VALUE,Always DM for demographics
+3,RAW.SUBJECTS_CLEAN,subject_id,DM,USUBJID,Char,40,CONCAT,"catx('-','&studyid',put(site_id,z3.),subject_id)",,NOT_NULL;UNIQUE,Unique subject identifier
+4,RAW.SUBJECTS_CLEAN,subject_id,DM,SUBJID,Char,10,DIRECT_MAP,SUBJID=subject_id,,NOT_NULL,Subject number within site
+5,RAW.SUBJECTS_CLEAN,site_id,DM,SITEID,Char,10,FORMAT,put(site_id,z3.),,NOT_NULL,Zero-padded 3-digit site number
+6,RAW.SUBJECTS_CLEAN,"dob_year,dob_month,dob_day",DM,BRTHDTC,Char,10,DATE_CONSTRUCT,"put(mdy(dob_month,dob_day,dob_year),is8601da.)",,ISO8601_DATE,Birth date from components
+7,RAW.SUBJECTS_CLEAN,age_years,DM,AGE,Num,3,DIRECT_MAP,AGE=age_years,,RANGE:18-120,Age at informed consent
+8,DERIVED,AGE,DM,AGEU,Char,6,CONDITIONAL,"if AGE ne . then AGEU='YEARS'",Age Unit,CONTROLLED_TERM,Age units only if AGE present
+9,RAW.SUBJECTS_CLEAN,sex,DM,SEX,Char,1,RECODE,"case(upcase(sex)) when('MALE','M') then 'M' when('FEMALE','F') then 'F' else 'U' end",Sex,CONTROLLED_TERM,Sex standardization to M/F/U
+10,RAW.SUBJECTS_CLEAN,"race_white,race_black,race_asian",DM,RACE,Char,100,MULTI_CHECKBOX,Complex multi-race logic in data step,Race,CONTROLLED_TERM,Multiple race handling - see code comments
+11,RAW.SUBJECTS_CLEAN,ethnicity,DM,ETHNIC,Char,50,RECODE,"case(upcase(ethnicity)) when('HISPANIC OR LATINO') then 'HISPANIC OR LATINO' when('NOT HISPANIC OR LATINO') then 'NOT HISPANIC OR LATINO' else 'NOT REPORTED' end",Ethnicity,CONTROLLED_TERM,Ethnicity standardization
+12,RAW.SUBJECTS_CLEAN,consent_date,DM,RFICDTC,Char,19,DATE_CONVERT,"put(input(consent_date,anydtdte.),is8601dt.)",,ISO8601_DATETIME,Informed consent date to ISO format
+13,RAW.SUBJECTS_CLEAN,rand_arm,DM,ARMCD,Char,20,RECODE,"case(rand_arm) when(1) then 'ARM_A' when(2) then 'ARM_B' else 'SCRNFAIL' end",Trial Arm,CONTROLLED_TERM,Planned treatment arm code
+14,RAW.SUBJECTS_CLEAN,rand_arm,DM,ARM,Char,200,RECODE,"case(rand_arm) when(1) then 'Experimental Treatment' when(2) then 'Placebo' else 'Screen Failure' end",Trial Arm,NOT_NULL,Planned treatment arm description
+15,RAW.SUBJECTS_CLEAN,country,DM,COUNTRY,Char,3,RECODE,"case(upcase(country)) when('USA','UNITED STATES') then 'USA' when('CAN','CANADA') then 'CAN' when('GBR','UK','UNITED KINGDOM') then 'GBR' else country end",ISO 3166-1 Alpha-3,CONTROLLED_TERM,Country code standardization to 3-char ISO
+16,RAW.SUBJECTS_CLEAN,first_dose_date,DM,RFXSTDTC,Char,19,DATE_CONVERT,"put(input(first_dose_date,anydtdte.),is8601dt.)",,ISO8601_DATETIME,First study treatment date
+17,RAW.SUBJECTS_CLEAN,last_dose_date,DM,RFXENDTC,Char,19,DATE_CONVERT,"put(input(last_dose_date,anydtdte.),is8601dt.)",,ISO8601_DATETIME,Last study treatment date
