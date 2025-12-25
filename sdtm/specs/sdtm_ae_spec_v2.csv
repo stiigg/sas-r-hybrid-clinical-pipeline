@@ -1,0 +1,18 @@
+seq,source_dataset,source_var,target_domain,target_var,target_type,target_length,transformation_type,transformation_logic,ct_codelist,quality_check,comments
+1,METADATA,,AE,STUDYID,Char,20,CONSTANT,"length STUDYID $20; STUDYID=""&studyid""",,NOT_NULL,Study identifier from global macro variable
+2,CONSTANT,,AE,DOMAIN,Char,2,CONSTANT,"length DOMAIN $2; DOMAIN=""AE""",Domain Code,EXACT_VALUE:AE,Domain code always AE for Adverse Events
+3,RAW.ADVERSE_EVENTS,USUBJID,AE,USUBJID,Char,40,DIRECT_MAP,"length USUBJID $40; USUBJID=strip(USUBJID)",,NOT_NULL|UNIQUE,Unique subject identifier from source
+4,SEQUENCE,,AE,AESEQ,Num,8,CONSTANT,"AESEQ=_N_",,NOT_NULL,Sequential sequence number per adverse event
+5,RAW.ADVERSE_EVENTS,AE_VERBATIM,AE,AETERM,Char,200,DIRECT_MAP,"length AETERM $200; AETERM=upcase(strip(AE_VERBATIM))",,NOT_NULL,Verbatim adverse event term as reported
+6,RAW.ADVERSE_EVENTS,MEDDRA_PT,AE,AEDECOD,Char,200,CONDITIONAL,"length AEDECOD $200; if not missing(MEDDRA_PT) then AEDECOD=upcase(strip(MEDDRA_PT)); else AEDECOD=AETERM;",MedDRA PT,NOT_NULL,MedDRA preferred term with verbatim fallback
+7,RAW.ADVERSE_EVENTS,AE_START_DATE,AE,AESTDTC,Char,20,DATE_CONVERT,"length AESTDTC $20; if not missing(AE_START_DATE) then AESTDTC=put(AE_START_DATE,yymmdd10.)",,ISO8601_DATE,ISO 8601 start date of adverse event
+8,RAW.ADVERSE_EVENTS,AE_END_DATE,AE,AEENDTC,Char,20,DATE_CONVERT,"length AEENDTC $20; if not missing(AE_END_DATE) then AEENDTC=put(AE_END_DATE,yymmdd10.)",,ISO8601_DATE,ISO 8601 end date of adverse event
+9,DERIVED,"AE_END_DATE,AE_START_DATE",AE,AEDUR,Num,8,CONDITIONAL,"if not missing(AE_END_DATE) and not missing(AE_START_DATE) then AEDUR=AE_END_DATE-AE_START_DATE+1",,RANGE:0-9999,Duration in days (end - start + 1)
+10,DERIVED,"AE_START_DATE,RFSTDTC",AE,AESTDY,Num,8,CONDITIONAL,"if not missing(AE_START_DATE) and not missing(input(RFSTDTC,yymmdd10.)) then do; if AE_START_DATE>=input(RFSTDTC,yymmdd10.) then AESTDY=AE_START_DATE-input(RFSTDTC,yymmdd10.)+1; else AESTDY=AE_START_DATE-input(RFSTDTC,yymmdd10.); end",,NOT_NULL,Study day of AE start per SDTM rules
+11,DERIVED,"AE_END_DATE,RFSTDTC",AE,AEENDY,Num,8,CONDITIONAL,"if not missing(AE_END_DATE) and not missing(input(RFSTDTC,yymmdd10.)) then do; if AE_END_DATE>=input(RFSTDTC,yymmdd10.) then AEENDY=AE_END_DATE-input(RFSTDTC,yymmdd10.)+1; else AEENDY=AE_END_DATE-input(RFSTDTC,yymmdd10.); end",,OPTIONAL,Study day of AE end per SDTM rules
+12,RAW.ADVERSE_EVENTS,SEVERITY,AE,AESEV,Char,8,DIRECT_MAP,"length AESEV $8; AESEV=upcase(strip(SEVERITY))",Severity (CT),CONTROLLED_TERM:MILD|MODERATE|SEVERE,Severity controlled terminology
+13,RAW.ADVERSE_EVENTS,SERIOUS_FLAG,AE,AESER,Char,1,RECODE,"length AESER $1; if upcase(strip(SERIOUS_FLAG)) in ('Y' 'YES' '1') then AESER='Y'; else if upcase(strip(SERIOUS_FLAG)) in ('N' 'NO' '0') then AESER='N'",Yes/No (CT),CONTROLLED_TERM:Y|N,Serious event flag controlled term
+14,RAW.ADVERSE_EVENTS,RELATIONSHIP,AE,AEREL,Char,40,DIRECT_MAP,"length AEREL $40; AEREL=upcase(strip(RELATIONSHIP))",Causality (CT),CONTROLLED_TERM,Relationship to study drug assessment
+15,RAW.ADVERSE_EVENTS,ACTION_TAKEN,AE,AEACN,Char,40,DIRECT_MAP,"length AEACN $40; AEACN=upcase(strip(ACTION_TAKEN))",Action Taken (CT),CONTROLLED_TERM,Action taken with study treatment
+16,RAW.ADVERSE_EVENTS,OUTCOME,AE,AEOUT,Char,40,DIRECT_MAP,"length AEOUT $40; AEOUT=upcase(strip(OUTCOME))",Outcome (CT),CONTROLLED_TERM,Outcome of adverse event
+17,DERIVED,"AE_START_DATE,RFSTDTC",AE,AETRTEM,Char,1,CONDITIONAL,"length AETRTEM $1; if not missing(AE_START_DATE) and not missing(input(RFSTDTC,yymmdd10.)) then do; if AE_START_DATE>=input(RFSTDTC,yymmdd10.) then AETRTEM='Y'; else AETRTEM=''; end",,OPTIONAL,Treatment-emergent flag (on/after RFSTDTC)
