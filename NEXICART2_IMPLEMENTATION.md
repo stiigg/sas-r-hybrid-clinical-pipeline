@@ -2,260 +2,205 @@
 
 ## Overview
 
-This document provides complete implementation instructions for NEXICART-2 AL amyloidosis CAR-T cell therapy trial updates to the sas-r-hybrid-clinical-pipeline repository.
+This document tracks the complete implementation of NEXICART-2 AL amyloidosis CAR-T cell therapy trial updates to the sas-r-hybrid-clinical-pipeline repository.
 
 **Study**: NEXICART-2 - Single-arm, multi-center trial evaluating autologous anti-BCMA CAR-T cells in relapsed/refractory AL amyloidosis
 
-**Branch**: `feature/nexicart-2-al-amyloidosis-domains`
+**Branch**: `feature/nexicart-2-complete-implementation`
+
+**Implementation Status**: Phase 2 Complete (Week 1 of 7)
 
 **Key Endpoints**:
-- Primary: Overall hematologic response rate (dFLC reduction)
-- Key Secondary: MRD negativity at 10^-6 sensitivity, Cardiac response (60% patients with cardiac involvement)
-- Safety: CRS/ICANS, infections, manufacturing failures
+- Primary: Overall hematologic response rate per IMWG criteria (dFLC reduction)
+- Key Secondary: MRD negativity at 10^-6 sensitivity, Cardiac response (NT-proBNP reduction)
+- Safety: CRS/ICANS grading, infections, manufacturing failures
 
 ---
 
-## Phase 1: Critical Missing Domains ✅ COMPLETE
+## Implementation Phases
 
-**Estimated Time**: 12-18 hours
+### **Phase 1: Critical Missing Domains** ✅ COMPLETE
 
-### 1.1 PR (Procedures) Domain
-
-**File Created**: `sdtm/programs/sas/48_sdtm_pr.sas`
-
-**Purpose**: Tracks critical procedures for efficacy and safety assessment
-
-**Key Features**:
-- MRD assessment by flow cytometry (10^-5 and 10^-6 sensitivity levels)
-- Echocardiography parameters (LVEF, wall thickness, strain)
-- CAR-T manufacturing flow (apheresis → CAR-T infusion)
-- Cytogenetic abnormalities [t(11;14), gain 1q, del(17p)]
-
-**Procedures Tracked**:
-| Category | PRTESTCD | PRTEST | Method |
-|----------|----------|--------|--------|
-| Bone Marrow | BMBIOPSY | Bone Marrow Biopsy | - |
-| Bone Marrow | MRDFLOW5 | MRD (10^-5) | Multicolor Flow Cytometry |
-| Bone Marrow | MRDFLOW6 | MRD (10^-6) | Multicolor Flow Cytometry |
-| Cardiac | LVEF | LV Ejection Fraction | Biplane Simpson |
-| Cardiac | WALLTHK | LV Wall Thickness | - |
-| Cardiac | STRAIN | Global Longitudinal Strain | Speckle Tracking Echo |
-| CAR-T Therapy | APHERESIS | Leukapheresis | - |
-| CAR-T Therapy | CARTINF | CAR-T Infusion | - |
-| Cytogenetics | T1114 | t(11;14) Status | FISH |
-| Cytogenetics | GAIN1Q | Gain 1q Status | FISH |
-| Cytogenetics | DEL17P | del(17p) Status | FISH |
-
-**Input Template**: `sdtm/data/raw/procedures_raw.csv`
-
-**Outputs**: 
-- `sdtm/data/csv/pr.csv`
-- `sdtm/data/xpt/pr.xpt`
-- `logs/48_sdtm_pr.log`
-
-**QC Checks**:
-- MRD negativity rates by sensitivity level
-- LVEF distribution at baseline vs follow-up
-- CAR-T manufacturing completion rate (apheresis → infusion)
-- Cytogenetic abnormality prevalence
+**Status**: ✅ Complete (from previous branch)
+**Files**: 
+- `sdtm/programs/sas/48_sdtm_pr.sas` - Procedures (MRD, echo, cytogenetics)
+- `sdtm/programs/sas/50_sdtm_dd.sas` - Death details
 
 ---
 
-### 1.2 DD (Death Details) Domain
+### **Phase 2: Laboratory Domain with dFLC Calculation** ✅ COMPLETE
 
-**File Created**: `sdtm/programs/sas/50_sdtm_dd.sas`
+**Status**: ✅ Complete (2025-12-28)
+**Implementation Time**: 3 hours
 
-**Purpose**: Regulatory-compliant death reporting with causality assessment
+#### Files Created/Updated:
 
-**Key Features**:
-- Death cause (verbatim and MedDRA coded)
-- Relationship to CAR-T therapy (NOT RELATED → RELATED)
-- Autopsy performed flag and findings
-- Disease category standardization
+1. **Raw Data Template**: `sdtm/data/raw/lab_results_nexicart2.csv` ✅
+   - 3 patients with realistic disease burden
+   - Lambda-involved: NEXICART2-001, NEXICART2-003
+   - Kappa-involved: NEXICART2-002
+   - Baseline + 2 follow-up timepoints
+   - 14 biomarkers per timepoint
 
-**Death Categories Standardized**:
-- PROGRESSIVE AL AMYLOIDOSIS
-- CARDIAC FAILURE
-- RENAL FAILURE
-- INFECTION
-- CYTOKINE RELEASE SYNDROME
-- OTHER
+2. **Enhanced LB Program**: `sdtm/programs/sas/42_sdtm_lb_nexicart2.sas` ✅
+   - Complete dFLC calculation from paired FLC values
+   - Light chain type (κ/λ) handling
+   - FLC ratio derivation for sCR assessment
+   - Clinical significance flags (HIGH, CS for critical values)
+   - 7 new LBCAT categories:
+     * SERUM FREE LIGHT CHAINS (KAPPA, LAMBDA, DFLC, FLCRATIO)
+     * CARDIAC BIOMARKERS (NT-proBNP, troponin)
+     * RENAL FUNCTION (proteinuria, eGFR, creatinine)
+     * IMMUNOFIXATION (serum, urine)
+     * CYTOKINE PANEL (IL-6, IL-10, IFN-γ)
+     * B-CELL RECOVERY (CD19+ counts)
+     * CAR-T PHARMACOKINETICS (CAR-T copies)
 
-**Input Template**: `sdtm/data/raw/death_details_raw.csv` (empty by default)
+3. **QC Validation**: `qc/validate_dflc_calculation.sas` ✅
+   - Independent dFLC recalculation
+   - Production comparison with 0.1 mg/L tolerance
+   - Automated PASS/FAIL flagging
 
-**Outputs**: 
-- `sdtm/data/csv/dd.csv`
-- `sdtm/data/xpt/dd.xpt`
-- `logs/50_sdtm_dd.log`
+#### Key Implementation Features:
 
-**Special Handling**: Creates empty domain structure if no deaths occur
+**dFLC Calculation Algorithm**:
+```sas
+/* Determine involved vs uninvolved light chain */
+if LCLCTYPE = 'λ' then do;
+    involved_flc = lambda_val;
+    uninvolved_flc = kappa_val;
+end;
+else if LCLCTYPE = 'κ' then do;
+    involved_flc = kappa_val;
+    uninvolved_flc = lambda_val;
+end;
 
----
-
-## Phase 2: Laboratory Domain Expansion 🚧 IN PROGRESS
-
-**Estimated Time**: 12-18 hours
-
-### 2.1 Enhanced LB Domain
-
-**File to Update**: `sdtm/programs/sas/42_sdtm_lb.sas`
-
-**New Biomarker Categories**:
-| LBCAT | Test Codes | Clinical Significance |
-|-------|------------|----------------------|
-| SERUM FREE LIGHT CHAINS | KAPPA, LAMBDA, DFLC | Primary efficacy endpoint |
-| CARDIAC BIOMARKERS | NTPROBNP, TROPHS, TROPNI | Cardiac response assessment |
-| RENAL FUNCTION | PROT24H, UPROT, EGFR, CREAT | Organ involvement tracking |
-| CAR-T PHARMACOKINETICS | CARTPK, CARTCMAX, CARTTMAX | CAR-T expansion monitoring |
-| CYTOKINE PANEL | IL6, IL10, IFNG, TNF | CRS prediction/monitoring |
-| IMMUNOFIXATION | SIF, UIF | Hematologic response |
-| B-CELL RECOVERY | CD19POS | B-cell aplasia tracking |
-
-### 2.2 Derived dFLC Calculation
-
-**Critical Formula**: 
-```
-dFLC = involved FLC - uninvolved FLC
-
-If lambda light chain type:
-  dFLC = LAMBDA - KAPPA
-  
-If kappa light chain type:
-  dFLC = KAPPA - LAMBDA
+/* Calculate dFLC per ISA 2012 consensus */
+dflc_value = involved_flc - uninvolved_flc;
 ```
 
-**Complete Response Threshold**: dFLC < 4 mg/dL
+**Clinical Thresholds Applied**:
+- dFLC <40 mg/L → Complete Response threshold (LBNRIND = NORMAL)
+- dFLC ≥180 mg/L → High-risk per Mayo 2012 (LBNRIND = HIGH, CS)
+- NT-proBNP >8500 ng/L → Mayo Stage IIIB cutoff (LBNRIND = HIGH, CS)
+- IL-6 >100 pg/mL → Grade 2+ CRS risk (LBNRIND = HIGH, CS)
 
-**Implementation Location**: After main LB dataset creation, before baseline flag derivation
-
-**Input Template**: `sdtm/data/raw/lab_results_raw.csv` ✅ Created
-
-**Required Metadata**: Light chain type must be stored in DM or MH domain (LIGHT_CHAIN_TYPE variable)
-
-**QC Validations**:
-- Manual verification of dFLC calculation for first 10 subjects
-- Baseline dFLC distribution summary
-- NT-proBNP baseline vs follow-up for cardiac response
-- Biomarker completeness by category
+**Quality Control Reports**:
+1. ✅ dFLC manual verification for 3 patients
+2. ✅ Baseline biomarker distribution
+3. ✅ Biomarker completeness by visit
+4. ✅ High-risk cardiac patient identification
+5. ✅ Method consistency check (Freelite assay)
 
 ---
 
-## Phase 3: Demographics Enhancement 📋 PENDING
+### **Phase 3: Demographics Enhancement** 📋 IN PROGRESS
 
-**Estimated Time**: 8-12 hours
+**Status**: 🚧 Raw data created, program pending
+**Target Completion**: Week 2 (2025-12-29)
 
-**File to Update**: `sdtm/programs/sas/20_sdtm_dm.sas`
+#### Files Created:
+- `sdtm/data/raw/demographics_nexicart2.csv` ✅
 
-**New Baseline Characteristics to Add**:
+#### File to Update:
+- `sdtm/programs/sas/20_sdtm_dm.sas` ⏳
 
-### Prior Treatment History
-- `NPRTLIN`: Number of prior lines of therapy (median 4, range 1-12)
-- `PRBORT`: Prior bortezomib exposure (Y/N) - 100% in NEXICART-2
-- `PRDARATU`: Prior daratumumab exposure (Y/N) - 100%
-- `PRASCT`: Prior autologous stem cell transplant (Y/N) - 50%
-- `PRLMWCLS`: Triple-class exposed (PI/IMiD/anti-CD38) (Y/N)
+#### Variables to Add:
 
-### Light Chain Type and Cytogenetics
-- `LCHTYPEC`: Light chain type (LAMBDA/KAPPA)
-- `CYTT1114`: t(11;14) present (Y/N)
-- `CYTG1Q`: Gain 1q present (Y/N)
-- `CYTD17P`: del(17p) present (Y/N)
+**Prior Treatment History**:
+- `NPRTLIN`: Number of prior lines (median 4)
+- `PRBORT`: Prior bortezomib (100%)
+- `PRDARATU`: Prior daratumumab (100%)
+- `PRASCT`: Prior auto-SCT (50%)
+- `PRLMWCLS`: Triple-class exposed
 
-### Baseline Organ Involvement
-- `CRDBASEF`: Cardiac involvement (Y/N) - 60% expected
-- `RENBASF`: Renal involvement (Y/N)
-- `HEPBASF`: Hepatic involvement (Y/N)
-- `NEUROBASF`: Peripheral neuropathy (Y/N)
-- `NORGINV`: Number of organs involved (derived)
+**Cytogenetics**:
+- `CYTT1114`: t(11;14) status
+- `CYTG1Q`: Gain 1q status
+- `CYTD17P`: del(17p) status
 
-### Disease Severity Staging
+**Organ Involvement**:
+- `CRDBASEF`: Cardiac involvement (60%)
+- `RENBASF`: Renal involvement
+- `HEPBASF`: Hepatic involvement
+- `NORGINV`: Number of organs (derived)
+
+**Disease Severity**:
 - `MAYOSTGB`: Mayo cardiac stage (I/II/IIIA/IIIB)
-- `NYHACALB`: NYHA heart failure class (I/II/III/IV)
+- `NYHACALB`: NYHA heart failure class
 
-### Baseline Disease Burden
-- `DFCLCBL`: Baseline dFLC (mg/dL)
-- `NTPROBNPB`: Baseline NT-proBNP (ng/L)
-- `TROPBL`: Baseline troponin (ng/mL)
-- `PROTBL`: Baseline 24h proteinuria (g/24h)
+**Baseline Burden**:
+- `DFCLCBL`: Baseline dFLC
+- `NTPROBNPB`: Baseline NT-proBNP
+- `TROPBL`: Baseline troponin
+- `PROTBL`: Baseline proteinuria
 
 ---
 
-## Phase 4: Adverse Events Enhancement 📋 PENDING
+### **Phase 4: CAR-T Specific AE Enhancements** 📋 PENDING
+
+**Target Completion**: Week 5
 
 **File to Update**: `sdtm/programs/sas/30_sdtm_ae.sas`
 
-**CAR-T Specific Toxicity Tracking**:
-- CRS grading (Lee 2019 criteria)
-- ICANS grading (ASTCT consensus)
-- Infection categorization
-- Cytopenias
+**Enhancements**:
+- AECAT2 = 'CYTOKINE RELEASE SYNDROME'
+- AECAT2 = 'ICANS'
+- AECAT2 = 'INFECTION'
+- AECAT2 = 'CYTOPENIA'
+- AECAT2 = 'TUMOR LYSIS SYNDROME'
 
 ---
 
-## Phase 5: Exposure Domain Enhancement 📋 PENDING
+### **Phase 5: EX Domain CAR-T Manufacturing** 📋 PENDING
 
-**File to Update**: `sdtm/programs/sas/38_sdtm_ex.sas`
+**Target Completion**: Week 6
 
-**CAR-T Dosing Details**:
-- CAR+ T cell dose (actual cells infused)
-- Manufacturing success/failure
-- Bridging therapy during manufacturing
+**File to Update**: `sdtm/programs/sas/38_sdtm_ex_v2.sas`
 
----
-
-## Phase 6: Response Assessment Domain 📋 PENDING
-
-**File to Update**: `sdtm/programs/sas/54_sdtm_rs.sas`
-
-**AL Amyloidosis Response Criteria**:
-- Hematologic response (CR/VGPR/PR/NR)
-- Cardiac response
-- Renal response
-- Hepatic response
+**Enhancements**:
+- Leukapheresis tracking
+- CAR-T infusion with dose
+- Vein-to-vein time calculation
+- Manufacturing failure flags
+- Bridging therapy documentation
 
 ---
 
-## Integration Instructions
+### **Phase 6: IMWG Response Criteria (ADaM ADRS)** 📋 PENDING
 
-### Prerequisites
-1. Ensure `sdtm/data/csv/dm.csv` exists with RFSTDTC for all subjects
-2. Create directory structure:
-   ```
-   sdtm/data/raw/     (for input CSVs)
-   sdtm/data/csv/     (for SDTM outputs)
-   sdtm/data/xpt/     (for transport files)
-   logs/              (for SAS logs)
-   ```
+**Target Completion**: Week 3-4
+**Priority**: CRITICAL - Primary efficacy endpoint
 
-### Running the Programs
+**Files to Create**:
+- `adam/programs/sas/60_adam_adlb_nexicart2.sas` ⏳
+- `adam/programs/sas/70_adam_adrs_imwg.sas` ⏳
 
-**Phase 1 Programs**:
-```sas
-/* Run in this order */
-%include 'sdtm/programs/sas/48_sdtm_pr.sas';
-%include 'sdtm/programs/sas/50_sdtm_dd.sas';
-```
+**IMWG Response Hierarchy** (7-tier):
+1. **sCR** (Stringent CR): Negative IF + Normal FLC ratio + BM <5% plasma cells
+2. **CR** (Complete Response): Negative IF + dFLC <40 mg/L
+3. **VGPR** (Very Good PR): dFLC <40 mg/L OR ≥90% reduction
+4. **PR** (Partial Response): ≥50% reduction AND absolute decrease ≥50 mg/L
+5. **MR** (Minimal Response): 25-49% reduction (NOT in ORR)
+6. **SD** (Stable Disease): Neither response nor progression
+7. **PD** (Progressive Disease): ≥25% increase from nadir + absolute increase ≥50 mg/L
 
-**Phase 2 Updates**: 
-1. Backup existing `42_sdtm_lb.sas`
-2. Apply code insertions as documented
-3. Run updated LB program
+**Additional Responses**:
+- Cardiac response: NT-proBNP ≥30% decrease + >300 ng/L absolute decrease
+- Renal response: Proteinuria ≥30% decrease OR eGFR improvement
 
-### Validation Checkpoints
+---
 
-After each phase:
-1. Review SAS log for ERRORs and WARNINGs
-2. Verify record counts match expectations
-3. Run QC frequency tables
-4. Check data completeness reports
+## 7-Week Implementation Roadmap
 
-### Expected Record Counts (7 Subjects)
-
-| Domain | Records | Subjects |
-|--------|---------|----------|
-| PR     | ~70-100 | 7 |
-| DD     | 0-10    | 0-2 |
-| LB     | ~500-700 | 7 |
+| Week | Phase | Deliverables | Status |
+|------|-------|--------------|--------|
+| **1** | Phase 2 | dFLC calculation, LB enhancements, QC validation | ✅ Complete |
+| **2** | Phase 3 | Demographics baseline characteristics | 🚧 In Progress |
+| **3-4** | Phase 6 | ADLB + ADRS IMWG response derivation | ⏳ Pending |
+| **5** | Phase 4 | CAR-T AE categorization | ⏳ Pending |
+| **6** | Phase 5 | Manufacturing tracking | ⏳ Pending |
+| **7** | Integration | Master pipeline, validation reports, documentation | ⏳ Pending |
 
 ---
 
@@ -266,17 +211,12 @@ After each phase:
 - Median 4 prior lines (range 1-12)
 - 100% bortezomib and daratumumab exposed
 - 60% with cardiac involvement
-- Mayo stage: I (0%), II (29%), IIIA (57%), IIIB (14%)
+- Mayo stage: II (33%), IIIA (67%)
 
-**Primary Endpoint**: Overall hematologic response rate
-- CR: dFLC <4 mg/dL + negative immunofixation
-- VGPR: dFLC <4 mg/dL or >90% reduction
-- PR: >50% dFLC reduction
-
-**Key Secondary Endpoints**:
-- MRD negativity (10^-6): 2/7 patients (29%)
-- Cardiac response: Defined by NT-proBNP >30% reduction + NYHA class improvement
-- Safety: CRS, ICANS, infections
+**Current Sample Data** (3 patients):
+- NEXICART2-001: Lambda, Mayo IIIA, NYHA III, baseline dFLC 1555 mg/L
+- NEXICART2-002: Kappa, Mayo II, NYHA II, baseline dFLC 1213 mg/L  
+- NEXICART2-003: Lambda, Mayo IIIA, NYHA II, baseline dFLC 670 mg/L
 
 **Manufacturing**:
 - Median manufacturing time: 16 days
@@ -284,16 +224,87 @@ After each phase:
 
 ---
 
-## Next Steps
+## Validation Status
 
-1. ✅ Phase 1 complete - PR and DD domains created
-2. 🔄 Complete Phase 2 - Update 42_sdtm_lb.sas with dFLC calculation
-3. ⏳ Phase 3 - Enhance 20_sdtm_dm.sas with baseline characteristics
-4. ⏳ Phases 4-6 - Update AE, EX, RS domains
+### Phase 2 Validation ✅
+- [x] dFLC calculation manually verified (3 patients)
+- [x] Light chain type consistency check passed
+- [x] Baseline biomarker distribution reasonable
+- [x] Clinical significance thresholds applied correctly
+- [x] Independent QC script created
+
+### Pending Validation
+- [ ] Demographics baseline characteristics summaries
+- [ ] IMWG response criteria algorithm
+- [ ] Cardiac response derivation
+- [ ] Response kinetics (time to response)
+- [ ] Manufacturing metrics (vein-to-vein time)
 
 ---
 
-## Questions or Issues?
+## Repository Structure
 
-Contact: Christian Baghai
-Date: 2025-12-27
+```
+sas-r-hybrid-clinical-pipeline/
+├── sdtm/
+│   ├── data/
+│   │   ├── raw/
+│   │   │   ├── lab_results_nexicart2.csv ✅
+│   │   │   └── demographics_nexicart2.csv ✅
+│   │   ├── csv/
+│   │   └── xpt/
+│   └── programs/
+│       └── sas/
+│           ├── 42_sdtm_lb_nexicart2.sas ✅
+│           └── 48_sdtm_pr.sas ✅
+├── adam/
+│   ├── data/
+│   └── programs/
+│       └── sas/
+│           ├── 60_adam_adlb_nexicart2.sas ⏳
+│           └── 70_adam_adrs_imwg.sas ⏳
+├── qc/
+│   └── validate_dflc_calculation.sas ✅
+└── NEXICART2_IMPLEMENTATION.md ✅ (this file)
+```
+
+---
+
+## Next Actions
+
+**Immediate (Week 2)**:
+1. Update `20_sdtm_dm.sas` with baseline characteristics
+2. Create QC report for demographics completeness
+3. Begin ADLB program for response derivations
+
+**Short-term (Weeks 3-4)**:
+1. Implement IMWG response algorithm in ADRS
+2. Add nadir detection for PD assessment
+3. Cardiac response derivation
+4. Create Best Overall Response (BOR) dataset
+
+**Medium-term (Weeks 5-6)**:
+1. CAR-T toxicity enhancements
+2. Manufacturing tracking
+3. Integration testing
+
+---
+
+## References
+
+**Clinical Guidelines**:
+- Palladini et al. Blood 2012 - IMWG consensus criteria for AL amyloidosis
+- Dispenzieri et al. Blood 2004 - Mayo staging system
+- Lee et al. Blood 2019 - ASTCT consensus grading for CRS/ICANS
+
+**CDISC Standards**:
+- SDTMIG v3.4 - Study Data Tabulation Model Implementation Guide
+- ADaMIG v1.3 - Analysis Data Model Implementation Guide
+
+---
+
+## Contact
+
+**Implementation Lead**: Christian Baghai
+**Last Updated**: 2025-12-28
+**Branch**: feature/nexicart-2-complete-implementation
