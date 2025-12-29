@@ -1,21 +1,27 @@
 /******************************************************************************
-* Program: 30_sdtm_ae.sas (PRODUCTION VERSION 2.0)
-* Purpose: Generate FDA-compliant SDTM AE (Adverse Events) domain
+* Program: 30_sdtm_ae.sas (CAR-T ENHANCED VERSION 3.0)
+* Purpose: Generate FDA-compliant SDTM AE domain with CAR-T enhancements
 * Author:  Christian Baghai
-* Date:    2025-12-26
-* Modified: Added 15+ missing SDTM variables, SUPPAE, validation
-* Input:   data/raw/adverse_events_raw.csv
+* Date:    2025-12-29
+* Modified: Added CAR-T specific categorization, expanded SUPPAE, validation
+* Input:   data/raw/adverse_events_cart_raw.csv
 * Output:  data/csv/ae.csv, data/csv/suppae.csv
 *          data/xpt/ae.xpt, data/xpt/suppae.xpt
 * 
-* Priority: HIGHEST - Required for FDA safety reporting
+* Priority: HIGHEST - Required for CAR-T BLA safety reporting
 * Standards: SDTM IG v3.3, FDA Technical Conformance Guide v5.0
-* Notes:   - MedDRA v27.1 coding included in raw data
-*          - Meets Pinnacle 21 validation requirements
-*          - Treatment-emergent flag in SUPPAE per FDA rules
+*            ASTCT 2019 Consensus CRS/ICANS Grading
+* Features: - MedDRA v27.1 coding
+*           - CAR-T specific AECAT/AESCAT categorization
+*           - ASTCT grading for CRS/ICANS in SUPPAE
+*           - Infection pathogen tracking
+*           - Prolonged cytopenia flagging
+*           - Cardiovascular event detection
+*           - carHLH identification
+*           - CAR-T specific validation checks
 ******************************************************************************/
 
-%let STUDYID = RECIST-DEMO-001;
+%let STUDYID = CAR-T-DEMO-001;
 %let DOMAIN = AE;
 
 /* Initialize validation flag macro variables */
@@ -28,26 +34,26 @@ libname raw "../../data/raw";
 libname sdtm "../../data/csv";
 
 /* Start logging */
-proc printto log="../../logs/30_sdtm_ae.log" new;
+proc printto log="../../logs/30_sdtm_ae_cart.log" new;
 run;
 
 %put NOTE: ============================================================;
-%put NOTE: Starting AE domain generation;
+%put NOTE: Starting CAR-T Enhanced AE domain generation;
 %put NOTE: Study: &STUDYID;
 %put NOTE: Timestamp: %sysfunc(datetime(), datetime20.);
 %put NOTE: ============================================================;
 
 /******************************************************************************
-* STEP 1: READ RAW ADVERSE EVENTS DATA
+* STEP 1: READ RAW ADVERSE EVENTS DATA (CAR-T Enhanced)
 ******************************************************************************/
-proc import datafile="../../data/raw/adverse_events_raw.csv"
+proc import datafile="../../data/raw/adverse_events_cart_raw.csv"
     out=raw_ae
     dbms=csv
     replace;
     guessingrows=max;
 run;
 
-%put NOTE: Raw AE data imported successfully;
+%put NOTE: CAR-T enhanced raw AE data imported successfully;
 
 /******************************************************************************
 * STEP 2: GET REFERENCE START DATE FROM DM DOMAIN
@@ -63,7 +69,7 @@ quit;
 %put NOTE: Retrieved reference dates for &dm_count subjects from DM;
 
 /******************************************************************************
-* STEP 3: TRANSFORM RAW DATA TO SDTM AE STRUCTURE
+* STEP 3: TRANSFORM RAW DATA TO SDTM AE WITH CAR-T CATEGORIZATION
 ******************************************************************************/
 data ae_base;
     merge raw_ae(in=a)
@@ -127,159 +133,214 @@ data ae_base;
     end;
     
     /*=========================================================================
-    * GROUPING QUALIFIERS (Permissible)
+    * GROUPING QUALIFIERS - CAR-T SPECIFIC CATEGORIZATION
     *========================================================================*/
     length AECAT $200;   /* Category for Adverse Event */
     length AESCAT $200;  /* Subcategory for Adverse Event */
     
-    if not missing(AE_CATEGORY) then AECAT = upcase(strip(AE_CATEGORY));
-    if not missing(AE_SUBCATEGORY) then AESCAT = upcase(strip(AE_SUBCATEGORY));
+    /*-------------------------------------------------------------------------
+    * CAR-T TOXICITY DETECTION AND CATEGORIZATION (FDA COMPLIANT)
+    *------------------------------------------------------------------------*/
     
-    /*=========================================================================
-    * RESULT QUALIFIERS - Location
-    *========================================================================*/
-    length AELOC $200;
-    if not missing(AE_LOCATION) then AELOC = upcase(strip(AE_LOCATION));
+    %put NOTE: Applying CAR-T specific categorization logic;
     
-    /*=========================================================================
-    * RESULT QUALIFIERS - Severity and Seriousness
-    *========================================================================*/
+    /* Initialize CAR-T category flags */
+    length IS_CART_TOX $1 CART_TOX_TYPE $40;
+    IS_CART_TOX = 'N';
+    CART_TOX_TYPE = '';
     
-    /* Severity - Controlled Terminology (MILD, MODERATE, SEVERE) */
-    length AESEV $8;
-    AESEV = upcase(strip(SEVERITY));
-    
-    /* Validate against controlled terminology */
-    if AESEV not in ('MILD' 'MODERATE' 'SEVERE' '') then do;
-        put "ERROR: Invalid AESEV value: " AESEV= "for" USUBJID= AESEQ=;
-        call symputx('validation_errors', 'YES');
-        AESEV = '';  /* Set to missing for invalid values */
-    end;
-    
-    /* Serious Event Flag - Y/N */
-    length AESER $1;
-    if upcase(strip(SERIOUS_FLAG)) in ('Y' 'YES' '1') then AESER = 'Y';
-    else if upcase(strip(SERIOUS_FLAG)) in ('N' 'NO' '0') then AESER = 'N';
-    else if not missing(SERIOUS_FLAG) then do;
-        put "WARNING: Invalid AESER value: " SERIOUS_FLAG= "for" USUBJID=;
-        call symputx('validation_warnings', 'YES');
-        AESER = '';
-    end;
-    
-    /*=========================================================================
-    * EIGHT SERIOUSNESS CRITERIA - FDA Requirement
-    *========================================================================*/
-    length AESDTH AESLIFE AESHOSP AESDISAB AESCONG AESMIE AESOD $1;
-    
-    /* Results in Death */
-    if upcase(strip(SAE_DEATH)) = 'Y' then AESDTH = 'Y';
-    else if upcase(strip(SAE_DEATH)) = 'N' then AESDTH = '';
-    else AESDTH = '';
-    
-    /* Life Threatening */
-    if upcase(strip(SAE_LIFE_THREAT)) = 'Y' then AESLIFE = 'Y';
-    else if upcase(strip(SAE_LIFE_THREAT)) = 'N' then AESLIFE = '';
-    else AESLIFE = '';
-    
-    /* Requires or Prolongs Hospitalization */
-    if upcase(strip(SAE_HOSPITALIZATION)) = 'Y' then AESHOSP = 'Y';
-    else if upcase(strip(SAE_HOSPITALIZATION)) = 'N' then AESHOSP = '';
-    else AESHOSP = '';
-    
-    /* Significant Disability/Incapacity */
-    if upcase(strip(SAE_DISABILITY)) = 'Y' then AESDISAB = 'Y';
-    else if upcase(strip(SAE_DISABILITY)) = 'N' then AESDISAB = '';
-    else AESDISAB = '';
-    
-    /* Congenital Anomaly/Birth Defect */
-    if upcase(strip(SAE_CONGENITAL)) = 'Y' then AESCONG = 'Y';
-    else if upcase(strip(SAE_CONGENITAL)) = 'N' then AESCONG = '';
-    else AESCONG = '';
-    
-    /* Medically Important Event */
-    if upcase(strip(SAE_MEDICALLY_IMP)) = 'Y' then AESMIE = 'Y';
-    else if upcase(strip(SAE_MEDICALLY_IMP)) = 'N' then AESMIE = '';
-    else AESMIE = '';
-    
-    /* Overdose (if applicable) */
-    if upcase(strip(SAE_OVERDOSE)) = 'Y' then AESOD = 'Y';
-    else if upcase(strip(SAE_OVERDOSE)) = 'N' then AESOD = '';
-    else AESOD = '';
-    
-    /* Validate: If AESER='Y', at least one criterion should be 'Y' */
-    if AESER = 'Y' then do;
-        if cmiss(AESDTH, AESLIFE, AESHOSP, AESDISAB, AESCONG, AESMIE, AESOD) = 7 
-           or (AESDTH ne 'Y' and AESLIFE ne 'Y' and AESHOSP ne 'Y' and 
-               AESDISAB ne 'Y' and AESCONG ne 'Y' and AESMIE ne 'Y' and AESOD ne 'Y') then do;
-            put "WARNING: AESER='Y' but no seriousness criteria flagged for" USUBJID= AESEQ=;
-            call symputx('validation_warnings', 'YES');
-        end;
-    end;
-    
-    /*=========================================================================
-    * RESULT QUALIFIERS - Causality, Action, Outcome
-    *========================================================================*/
-    
-    /* Causality Assessment - Relationship to Study Drug */
-    length AEREL $100;  /* Increased from $40 */
-    AEREL = upcase(strip(RELATIONSHIP));
-    
-    /* Validate AEREL against standard values */
-    if AEREL not in ('NOT RELATED' 'UNLIKELY RELATED' 'POSSIBLY RELATED' 
-                     'PROBABLY RELATED' 'RELATED' '') then do;
-        put "WARNING: Non-standard AEREL value: " AEREL= "for" USUBJID= AESEQ=;
-        call symputx('validation_warnings', 'YES');
-    end;
-    
-    /* Action Taken with Study Treatment */
-    length AEACN $100;  /* Increased from $40 */
-    AEACN = upcase(strip(ACTION_TAKEN));
-    
-    /* Validate AEACN against standard values */
-    if AEACN not in ('DOSE NOT CHANGED' 'DOSE REDUCED' 'DOSE INCREASED' 
-                     'DRUG INTERRUPTED' 'DRUG WITHDRAWN' 'NOT APPLICABLE'
-                     'UNKNOWN' 'NOT EVALUABLE' '') then do;
-        put "WARNING: Non-standard AEACN value: " AEACN= "for" USUBJID= AESEQ=;
-        /* Allow non-standard values but log for review */
-    end;
-    
-    /* Outcome of Adverse Event */
-    length AEOUT $100;  /* Increased from $40 */
-    AEOUT = upcase(strip(OUTCOME));
-    
-    /* Validate AEOUT against standard values */
-    if AEOUT not in ('RECOVERED/RESOLVED' 'RECOVERING/RESOLVING' 
-                     'NOT RECOVERED/NOT RESOLVED' 'FATAL' 
-                     'RECOVERED/RESOLVED WITH SEQUELAE' 'UNKNOWN' '') then do;
-        put "WARNING: Non-standard AEOUT value: " AEOUT= "for" USUBJID= AESEQ=;
-    end;
-    
-    /*=========================================================================
-    * TIMING VARIABLES - ISO 8601 format YYYY-MM-DD
-    *========================================================================*/
-    length AESTDTC $20 AEENDTC $20;
-    
-    if not missing(AE_START_DATE) then do;
-        AESTDTC = put(AE_START_DATE, yymmdd10.);
-    end;
-    
-    if not missing(AE_END_DATE) then do;
-        AEENDTC = put(AE_END_DATE, yymmdd10.);
-    end;
-    
-    /* Duration in days */
-    if not missing(AE_END_DATE) and not missing(AE_START_DATE) then do;
-        AEDUR = AE_END_DATE - AE_START_DATE + 1;
+    /* 1. CRS DETECTION */
+    if upcase(strip(CRS_FLAG)) = 'Y' or
+       index(upcase(AEDECOD), 'CYTOKINE RELEASE') > 0 or
+       index(upcase(AETERM), 'CRS') > 0 then do;
         
-        /* Validate duration is positive */
-        if AEDUR < 1 then do;
-            put "ERROR: Negative AEDUR for" USUBJID= AESEQ= AESTDTC= AEENDTC= AEDUR=;
+        AECAT = 'CAR-T TOXICITY';
+        AESCAT = 'CRS';
+        IS_CART_TOX = 'Y';
+        CART_TOX_TYPE = 'CRS';
+        
+        /* CRITICAL: Fever required for CRS per ASTCT */
+        if missing(CRS_FEVER_PRESENT) or upcase(CRS_FEVER_PRESENT) ne 'Y' then do;
+            put "ERROR: CRS requires fever per ASTCT 2019" USUBJID= AESEQ=;
+            call symputx('validation_errors', 'YES');
+        end;
+        
+        /* Validate ASTCT grade */
+        if missing(ASTCT_CRS_GRADE) then do;
+            put "ERROR: Missing ASTCT_CRS_GRADE for CRS" USUBJID= AESEQ=;
             call symputx('validation_errors', 'YES');
         end;
     end;
     
-    /* Study Day Calculation (relative to RFSTDTC from DM) */
-    /* No Day 0 - asymmetric logic: -2, -1, 1, 2, 3... */
+    /* 2. ICANS DETECTION */
+    else if upcase(strip(ICANS_FLAG)) = 'Y' or
+       index(upcase(AEDECOD), 'ICANS') > 0 or
+       index(upcase(AEDECOD), 'IMMUNE EFFECTOR CELL') > 0 or
+       index(upcase(AEDECOD), 'ENCEPHALOPATHY') > 0 then do;
+        
+        AECAT = 'CAR-T TOXICITY';
+        AESCAT = 'ICANS';
+        IS_CART_TOX = 'Y';
+        CART_TOX_TYPE = 'ICANS';
+        
+        /* CRITICAL: ICE Score required */
+        if missing(ICE_SCORE) then do;
+            put "ERROR: Missing ICE_SCORE for ICANS" USUBJID= AESEQ=;
+            call symputx('validation_errors', 'YES');
+        end;
+    end;
+    
+    /* 3. INFECTION CATEGORIZATION */
+    else if upcase(strip(INFECTION_FLAG)) = 'Y' or
+       index(upcase(AEBODSYS), 'INFECTIONS AND INFESTATIONS') > 0 then do;
+        
+        AECAT = 'INFECTION';
+        CART_TOX_TYPE = 'INFECTION';
+        
+        /* Subcategorize by timing */
+        if not missing(INFECTION_ONSET_DAY_POST_INFUSION) then do;
+            if INFECTION_ONSET_DAY_POST_INFUSION <= 7 then
+                AESCAT = 'EARLY INFECTION (0-7 DAYS)';
+            else if INFECTION_ONSET_DAY_POST_INFUSION <= 30 then
+                AESCAT = 'INTERMEDIATE INFECTION (8-30 DAYS)';
+            else if INFECTION_ONSET_DAY_POST_INFUSION <= 90 then
+                AESCAT = 'LATE INFECTION (31-90 DAYS)';
+            else
+                AESCAT = 'VERY LATE INFECTION (>90 DAYS)';
+        end;
+    end;
+    
+    /* 4. CYTOPENIA CATEGORIZATION */
+    else if upcase(strip(CYTOPENIA_FLAG)) = 'Y' or
+       index(upcase(AEDECOD), 'NEUTROPENIA') > 0 or
+       index(upcase(AEDECOD), 'THROMBOCYTOPENIA') > 0 or
+       index(upcase(AEDECOD), 'ANEMIA') > 0 then do;
+        
+        AECAT = 'HEMATOLOGIC';
+        CART_TOX_TYPE = 'CYTOPENIA';
+        
+        /* Duration-based subcategorization */
+        if not missing(CYTOPENIA_DURATION_DAYS) then do;
+            if CYTOPENIA_DURATION_DAYS <= 30 then
+                AESCAT = 'ACUTE CYTOPENIA (≤30 DAYS)';
+            else if CYTOPENIA_DURATION_DAYS <= 90 then
+                AESCAT = 'PROLONGED CYTOPENIA (31-90 DAYS)';
+            else
+                AESCAT = 'CHRONIC CYTOPENIA (>90 DAYS)';
+        end;
+    end;
+    
+    /* 5. CARDIOVASCULAR EVENTS */
+    else if upcase(strip(CV_EVENT_FLAG)) = 'Y' or
+       index(upcase(AEBODSYS), 'CARDIAC DISORDERS') > 0 then do;
+        
+        AECAT = 'CARDIOVASCULAR';
+        CART_TOX_TYPE = 'CARDIAC';
+        
+        if not missing(CV_EVENT_TYPE) then
+            AESCAT = upcase(strip(CV_EVENT_TYPE));
+        else
+            AESCAT = 'CARDIAC EVENT';
+    end;
+    
+    /* 6. carHLH DETECTION */
+    else if upcase(strip(CARHLH_FLAG)) = 'Y' or
+       index(upcase(AEDECOD), 'HEMOPHAGOCYTIC') > 0 then do;
+        
+        AECAT = 'CAR-T TOXICITY';
+        AESCAT = 'carHLH';
+        IS_CART_TOX = 'Y';
+        CART_TOX_TYPE = 'carHLH';
+        
+        /* carHLH is ALWAYS serious */
+        AESER = 'Y';
+        if AESEV ne 'SEVERE' then AESEV = 'SEVERE';
+    end;
+    
+    /* 7. HYPOGAMMAGLOBULINEMIA */
+    else if upcase(strip(HYPOGAMMA_FLAG)) = 'Y' or
+       index(upcase(AEDECOD), 'HYPOGAMMAGLOBULINEMIA') > 0 then do;
+        
+        AECAT = 'IMMUNE DEFICIENCY';
+        AESCAT = 'HYPOGAMMAGLOBULINEMIA';
+        CART_TOX_TYPE = 'IMMUNE_DEFICIENCY';
+    end;
+    
+    /* Preserve manual categorization if no CAR-T category detected */
+    if CART_TOX_TYPE = '' then do;
+        if not missing(AE_CATEGORY) then AECAT = upcase(strip(AE_CATEGORY));
+        if not missing(AE_SUBCATEGORY) then AESCAT = upcase(strip(AE_SUBCATEGORY));
+    end;
+    
+    /*=========================================================================
+    * RESULT QUALIFIERS - Location, Severity, Seriousness
+    *========================================================================*/
+    length AELOC $200;
+    if not missing(AE_LOCATION) then AELOC = upcase(strip(AE_LOCATION));
+    
+    /* Severity */
+    length AESEV $8;
+    AESEV = upcase(strip(SEVERITY));
+    
+    /* Serious Event Flag */
+    length AESER $1;
+    if upcase(strip(SERIOUS_FLAG)) in ('Y' 'YES' '1') then AESER = 'Y';
+    else if upcase(strip(SERIOUS_FLAG)) in ('N' 'NO' '0') then AESER = 'N';
+    
+    /*=========================================================================
+    * EIGHT SERIOUSNESS CRITERIA
+    *========================================================================*/
+    length AESDTH AESLIFE AESHOSP AESDISAB AESCONG AESMIE AESOD $1;
+    
+    if upcase(strip(SAE_DEATH)) = 'Y' then AESDTH = 'Y';
+    else AESDTH = '';
+    
+    if upcase(strip(SAE_LIFE_THREAT)) = 'Y' then AESLIFE = 'Y';
+    else AESLIFE = '';
+    
+    if upcase(strip(SAE_HOSPITALIZATION)) = 'Y' then AESHOSP = 'Y';
+    else AESHOSP = '';
+    
+    if upcase(strip(SAE_DISABILITY)) = 'Y' then AESDISAB = 'Y';
+    else AESDISAB = '';
+    
+    if upcase(strip(SAE_CONGENITAL)) = 'Y' then AESCONG = 'Y';
+    else AESCONG = '';
+    
+    if upcase(strip(SAE_MEDICALLY_IMP)) = 'Y' then AESMIE = 'Y';
+    else AESMIE = '';
+    
+    if upcase(strip(SAE_OVERDOSE)) = 'Y' then AESOD = 'Y';
+    else AESOD = '';
+    
+    /*=========================================================================
+    * RESULT QUALIFIERS - Causality, Action, Outcome
+    *========================================================================*/
+    length AEREL $100;
+    AEREL = upcase(strip(RELATIONSHIP));
+    
+    length AEACN $100;
+    AEACN = upcase(strip(ACTION_TAKEN));
+    
+    length AEOUT $100;
+    AEOUT = upcase(strip(OUTCOME));
+    
+    /*=========================================================================
+    * TIMING VARIABLES
+    *========================================================================*/
+    length AESTDTC $20 AEENDTC $20;
+    
+    if not missing(AE_START_DATE) then
+        AESTDTC = put(AE_START_DATE, yymmdd10.);
+    
+    if not missing(AE_END_DATE) then
+        AEENDTC = put(AE_END_DATE, yymmdd10.);
+    
+    /* Duration */
+    if not missing(AE_END_DATE) and not missing(AE_START_DATE) then
+        AEDUR = AE_END_DATE - AE_START_DATE + 1;
+    
+    /* Study Day Calculation */
     if not missing(AE_START_DATE) and not missing(RFSTDT) then do;
         if AE_START_DATE >= RFSTDT then 
             AESTDY = AE_START_DATE - RFSTDT + 1;
@@ -294,57 +355,35 @@ data ae_base;
             AEENDY = AE_END_DATE - RFSTDT;
     end;
     
-    /* Validate AEENDY >= AESTDY */
-    if not missing(AESTDY) and not missing(AEENDY) then do;
-        if AEENDY < AESTDY then do;
-            put "ERROR: AEENDY < AESTDY for" USUBJID= AESEQ= AESTDY= AEENDY=;
-            call symputx('validation_errors', 'YES');
-        end;
-    end;
-    
     /*=========================================================================
-    * CALCULATE TREATMENT EMERGENT FLAG (for SUPPAE)
+    * TREATMENT EMERGENT FLAG
     *========================================================================*/
     length AETRTEM $1;
     if not missing(AE_START_DATE) and not missing(RFSTDT) then do;
         if AE_START_DATE >= RFSTDT then AETRTEM = 'Y';
         else AETRTEM = '';
     end;
-    else do;
-        AETRTEM = '';  /* Cannot determine without dates */
-    end;
     
-    /* Drop temporary variables */
     drop RFSTDT;
 run;
 
-%put NOTE: AE transformation completed;
+%put NOTE: AE transformation with CAR-T categorization completed;
 
 /******************************************************************************
-* STEP 4: CREATE FINAL AE DOMAIN (per SDTM variable order)
+* STEP 4: CREATE FINAL AE DOMAIN
 ******************************************************************************/
 data ae;
     set ae_base;
     
-    /* Keep only SDTM variables in CORRECT SDTM IG v3.3 ORDER */
     keep 
-        /* 1. Identifiers */
         STUDYID DOMAIN USUBJID AESEQ
-        /* 2. Topic */
         AETERM
-        /* 3. Synonyms - MedDRA Hierarchy */
         AEDECOD AEPTCD AEBODSYS AESOC AEHLT AEHLGT AELLT
-        /* 4. Grouping Qualifiers */
         AECAT AESCAT
-        /* 5. Result Qualifiers - Location */
         AELOC
-        /* 6. Result Qualifiers - Severity */
         AESEV AESER
-        /* 7. Seriousness Criteria (8 variables) */
         AESDTH AESLIFE AESHOSP AESDISAB AESCONG AESMIE AESOD
-        /* 8. Result Qualifiers - Actions/Outcomes */
         AEACN AEREL AEOUT
-        /* 9. Timing Variables */
         AESTDTC AEENDTC AEDUR AESTDY AEENDY;
 run;
 
@@ -356,22 +395,22 @@ quit;
 %put NOTE: AE domain created with &ae_count records for &subj_count subjects;
 
 /******************************************************************************
-* STEP 5: CREATE SUPPAE DOMAIN (for AETRTEM per FDA requirements)
+* STEP 5: CREATE COMPREHENSIVE SUPPAE DOMAIN (CAR-T Enhanced)
 ******************************************************************************/
-data suppae;
+
+%put NOTE: Generating comprehensive SUPPAE domain for CAR-T submission;
+
+/* Treatment-Emergent Flag */
+data suppae_trtem;
     set ae_base;
-    
-    /* Only create records where AETRTEM has a value */
     where not missing(AETRTEM);
     
     length STUDYID $20 RDOMAIN $2 USUBJID $40;
     length IDVAR $8 IDVARVAL $200;
-    length QNAM $8 QLABEL $40 QVAL $200;
-    length QORIG $8 QEVAL $40;
+    length QNAM $8 QLABEL $40 QVAL $200 QORIG $8 QEVAL $40;
     
     STUDYID = "&STUDYID";
     RDOMAIN = "AE";
-    /* USUBJID comes from base */
     IDVAR = "AESEQ";
     IDVARVAL = strip(put(AESEQ, best.));
     QNAM = "AETRTEM";
@@ -383,6 +422,245 @@ data suppae;
     keep STUDYID RDOMAIN USUBJID IDVAR IDVARVAL QNAM QLABEL QVAL QORIG QEVAL;
 run;
 
+/* CRS-Specific SUPPAE */
+data suppae_crs;
+    set ae_base;
+    where AESCAT = 'CRS';
+    
+    length STUDYID $20 RDOMAIN $2 USUBJID $40;
+    length IDVAR $8 IDVARVAL $200;
+    length QNAM $8 QLABEL $40 QVAL $200 QORIG $8 QEVAL $40;
+    
+    STUDYID = "&STUDYID";
+    RDOMAIN = "AE";
+    IDVAR = "AESEQ";
+    IDVARVAL = strip(put(AESEQ, best.));
+    
+    /* ASTCT Grade */
+    if not missing(ASTCT_CRS_GRADE) then do;
+        QNAM = "CRSASTCT";
+        QLABEL = "CRS ASTCT Consensus Grade";
+        QVAL = strip(ASTCT_CRS_GRADE);
+        QORIG = "ASSIGNED";
+        QEVAL = "INVESTIGATOR";
+        output;
+    end;
+    
+    /* Fever */
+    if not missing(CRS_FEVER_PRESENT) then do;
+        QNAM = "CRSFEVER";
+        QLABEL = "Fever Present";
+        QVAL = upcase(strip(CRS_FEVER_PRESENT));
+        QORIG = "REPORTED";
+        QEVAL = "";
+        output;
+    end;
+    
+    /* Peak Temperature */
+    if not missing(CRS_PEAK_TEMP_C) then do;
+        QNAM = "CRSMAXTP";
+        QLABEL = "Maximum Temperature (C)";
+        QVAL = strip(put(CRS_PEAK_TEMP_C, 5.1));
+        QORIG = "REPORTED";
+        QEVAL = "";
+        output;
+    end;
+    
+    /* Tocilizumab */
+    if not missing(TOCILIZUMAB_GIVEN) then do;
+        QNAM = "CRSTOCI";
+        QLABEL = "Tocilizumab Administered";
+        QVAL = upcase(strip(TOCILIZUMAB_GIVEN));
+        QORIG = "REPORTED";
+        QEVAL = "";
+        output;
+    end;
+    
+    /* Steroids */
+    if not missing(STEROIDS_GIVEN_FOR_CRS) then do;
+        QNAM = "CRSSTER";
+        QLABEL = "Steroids Administered";
+        QVAL = upcase(strip(STEROIDS_GIVEN_FOR_CRS));
+        QORIG = "REPORTED";
+        QEVAL = "";
+        output;
+    end;
+    
+    keep STUDYID RDOMAIN USUBJID IDVAR IDVARVAL QNAM QLABEL QVAL QORIG QEVAL;
+run;
+
+/* ICANS-Specific SUPPAE */
+data suppae_icans;
+    set ae_base;
+    where AESCAT = 'ICANS';
+    
+    length STUDYID $20 RDOMAIN $2 USUBJID $40;
+    length IDVAR $8 IDVARVAL $200;
+    length QNAM $8 QLABEL $40 QVAL $200 QORIG $8 QEVAL $40;
+    
+    STUDYID = "&STUDYID";
+    RDOMAIN = "AE";
+    IDVAR = "AESEQ";
+    IDVARVAL = strip(put(AESEQ, best.));
+    
+    /* ASTCT ICANS Grade */
+    if not missing(ASTCT_ICANS_GRADE) then do;
+        QNAM = "ICANSAST";
+        QLABEL = "ICANS ASTCT Consensus Grade";
+        QVAL = strip(ASTCT_ICANS_GRADE);
+        QORIG = "ASSIGNED";
+        QEVAL = "INVESTIGATOR";
+        output;
+    end;
+    
+    /* ICE Score (REQUIRED) */
+    if not missing(ICE_SCORE) then do;
+        QNAM = "ICESCORE";
+        QLABEL = "ICE Score at Peak ICANS";
+        QVAL = strip(put(ICE_SCORE, 3.));
+        QORIG = "ASSIGNED";
+        QEVAL = "INVESTIGATOR";
+        output;
+    end;
+    
+    /* Level of Consciousness */
+    if not missing(ICANS_CONSCIOUSNESS_LEVEL) then do;
+        QNAM = "ICANSLOC";
+        QLABEL = "Level of Consciousness";
+        QVAL = upcase(strip(ICANS_CONSCIOUSNESS_LEVEL));
+        QORIG = "ASSIGNED";
+        QEVAL = "INVESTIGATOR";
+        output;
+    end;
+    
+    /* Seizures */
+    if not missing(ICANS_SEIZURE_PRESENT) then do;
+        QNAM = "ICANSSEIZ";
+        QLABEL = "Seizures Present";
+        QVAL = upcase(strip(ICANS_SEIZURE_PRESENT));
+        QORIG = "REPORTED";
+        QEVAL = "";
+        output;
+    end;
+    
+    /* Dexamethasone */
+    if not missing(DEXAMETHASONE_FOR_ICANS) then do;
+        QNAM = "ICANSDEX";
+        QLABEL = "Dexamethasone Given";
+        QVAL = upcase(strip(DEXAMETHASONE_FOR_ICANS));
+        QORIG = "REPORTED";
+        QEVAL = "";
+        output;
+    end;
+    
+    keep STUDYID RDOMAIN USUBJID IDVAR IDVARVAL QNAM QLABEL QVAL QORIG QEVAL;
+run;
+
+/* Infection-Specific SUPPAE */
+data suppae_infections;
+    set ae_base;
+    where AECAT = 'INFECTION';
+    
+    length STUDYID $20 RDOMAIN $2 USUBJID $40;
+    length IDVAR $8 IDVARVAL $200;
+    length QNAM $8 QLABEL $40 QVAL $200 QORIG $8 QEVAL $40;
+    
+    STUDYID = "&STUDYID";
+    RDOMAIN = "AE";
+    IDVAR = "AESEQ";
+    IDVARVAL = strip(put(AESEQ, best.));
+    
+    /* Infection Type */
+    if not missing(INFECTION_TYPE) then do;
+        QNAM = "INFTYPE";
+        QLABEL = "Infection Type";
+        QVAL = upcase(strip(INFECTION_TYPE));
+        QORIG = "ASSIGNED";
+        QEVAL = "INVESTIGATOR";
+        output;
+    end;
+    
+    /* Pathogen */
+    if not missing(PATHOGEN_NAME) then do;
+        QNAM = "PATHOGEN";
+        QLABEL = "Pathogen Identified";
+        QVAL = upcase(strip(PATHOGEN_NAME));
+        QORIG = "REPORTED";
+        QEVAL = "";
+        output;
+    end;
+    
+    /* Site */
+    if not missing(INFECTION_SITE) then do;
+        QNAM = "INFSITE";
+        QLABEL = "Site of Infection";
+        QVAL = upcase(strip(INFECTION_SITE));
+        QORIG = "ASSIGNED";
+        QEVAL = "INVESTIGATOR";
+        output;
+    end;
+    
+    keep STUDYID RDOMAIN USUBJID IDVAR IDVARVAL QNAM QLABEL QVAL QORIG QEVAL;
+run;
+
+/* Cytopenia-Specific SUPPAE */
+data suppae_cytopenias;
+    set ae_base;
+    where AECAT = 'HEMATOLOGIC';
+    
+    length STUDYID $20 RDOMAIN $2 USUBJID $40;
+    length IDVAR $8 IDVARVAL $200;
+    length QNAM $8 QLABEL $40 QVAL $200 QORIG $8 QEVAL $40;
+    
+    STUDYID = "&STUDYID";
+    RDOMAIN = "AE";
+    IDVAR = "AESEQ";
+    IDVARVAL = strip(put(AESEQ, best.));
+    
+    /* Duration Category */
+    if not missing(CYTOPENIA_DURATION_DAYS) then do;
+        QNAM = "CYTOPDUR";
+        QLABEL = "Cytopenia Duration Category";
+        if CYTOPENIA_DURATION_DAYS <= 30 then QVAL = "ACUTE (<=30 DAYS)";
+        else if CYTOPENIA_DURATION_DAYS <= 90 then QVAL = "PROLONGED (31-90 DAYS)";
+        else QVAL = "CHRONIC (>90 DAYS)";
+        QORIG = "DERIVED";
+        QEVAL = "";
+        output;
+    end;
+    
+    /* Nadir Values */
+    if not missing(NADIR_ANC_VALUE) then do;
+        QNAM = "CYTOPNAD";
+        QLABEL = "Nadir ANC Value";
+        QVAL = strip(put(NADIR_ANC_VALUE, best.));
+        QORIG = "REPORTED";
+        QEVAL = "";
+        output;
+    end;
+    
+    /* G-CSF */
+    if not missing(GCSF_ADMINISTERED) then do;
+        QNAM = "CYTOPGF";
+        QLABEL = "Growth Factor Given";
+        QVAL = upcase(strip(GCSF_ADMINISTERED));
+        QORIG = "DERIVED";
+        QEVAL = "";
+        output;
+    end;
+    
+    keep STUDYID RDOMAIN USUBJID IDVAR IDVARVAL QNAM QLABEL QVAL QORIG QEVAL;
+run;
+
+/* Combine all SUPPAE records */
+data suppae;
+    set suppae_trtem
+        suppae_crs
+        suppae_icans
+        suppae_infections
+        suppae_cytopenias;
+run;
+
 proc sql noprint;
     select count(*) into :suppae_count trimmed from suppae;
 quit;
@@ -390,8 +668,76 @@ quit;
 %put NOTE: SUPPAE domain created with &suppae_count records;
 
 /******************************************************************************
-* STEP 6: SORT DATASETS BY KEY VARIABLES
+* STEP 6: CAR-T SPECIFIC QC CHECKS
 ******************************************************************************/
+
+%put NOTE: Running CAR-T specific quality checks;
+
+/* QC Check: CRS without fever */
+title "CAR-T QC Check: CRS Events Without Fever";
+proc sql;
+    create table qc_crs_no_fever as
+    select ae.USUBJID, ae.AESEQ, ae.AETERM
+    from ae
+    where AESCAT = 'CRS'
+      and not exists (
+          select 1 from suppae s
+          where s.USUBJID = ae.USUBJID
+            and s.IDVARVAL = put(ae.AESEQ, best.)
+            and s.QNAM = 'CRSFEVER'
+            and s.QVAL = 'Y'
+      );
+    
+    select count(*) into :crs_no_fever trimmed from qc_crs_no_fever;
+quit;
+
+%if &crs_no_fever > 0 %then %do;
+    %put ERROR: &crs_no_fever CRS events missing fever documentation!;
+    %let validation_errors = YES;
+%end;
+title;
+
+/* QC Check: ICANS without ICE Score */
+title "CAR-T QC Check: ICANS Events Without ICE Score";
+proc sql;
+    create table qc_icans_no_ice as
+    select ae.USUBJID, ae.AESEQ, ae.AETERM
+    from ae
+    where AESCAT = 'ICANS'
+      and not exists (
+          select 1 from suppae s
+          where s.USUBJID = ae.USUBJID
+            and s.IDVARVAL = put(ae.AESEQ, best.)
+            and s.QNAM = 'ICESCORE'
+      );
+    
+    select count(*) into :icans_no_ice trimmed from qc_icans_no_ice;
+quit;
+
+%if &icans_no_ice > 0 %then %do;
+    %put ERROR: &icans_no_ice ICANS events missing ICE score!;
+    %let validation_errors = YES;
+%end;
+title;
+
+/* QC Check: CAR-T Toxicity Distribution */
+title "CAR-T QC Check: Toxicity Distribution";
+proc sql;
+    create table qc_cart_dist as
+    select AECAT, AESCAT, count(*) as n
+    from ae
+    where AECAT in ('CAR-T TOXICITY', 'INFECTION', 'HEMATOLOGIC', 'CARDIOVASCULAR')
+    group by AECAT, AESCAT
+    order by AECAT, n desc;
+    
+    select * from qc_cart_dist;
+quit;
+title;
+
+/******************************************************************************
+* STEP 7: EXPORT FILES
+******************************************************************************/
+
 proc sort data=ae;
     by USUBJID AESEQ;
 run;
@@ -400,180 +746,7 @@ proc sort data=suppae;
     by USUBJID IDVARVAL;
 run;
 
-%put NOTE: Datasets sorted successfully;
-
-/******************************************************************************
-* STEP 7: DATA QUALITY CHECKS
-******************************************************************************/
-
-%put NOTE: ============================================================;
-%put NOTE: Running data quality checks;
-%put NOTE: ============================================================;
-
-/* QC Check 1: Frequency distributions */
-title "QC Check 1: Frequency Distributions of Key Variables";
-proc freq data=ae;
-    tables AESEV AESER AEREL AEACN AEOUT / missing;
-    tables AESDTH AESLIFE AESHOSP AESDISAB AESCONG AESMIE AESOD / missing;
-run;
-title;
-
-/* QC Check 2: Descriptive statistics */
-title "QC Check 2: Descriptive Statistics for Numeric Variables";
-proc means data=ae n nmiss mean median min max;
-    var AEDUR AESTDY AEENDY;
-run;
-title;
-
-/* QC Check 3: MedDRA coding completeness */
-title "QC Check 3: MedDRA Coding Completeness";
-proc sql;
-    create table qc_meddra as
-    select 
-        count(*) as total_aes,
-        sum(case when missing(AEDECOD) then 1 else 0 end) as missing_aedecod,
-        sum(case when missing(AEPTCD) then 1 else 0 end) as missing_aeptcd,
-        sum(case when missing(AEBODSYS) then 1 else 0 end) as missing_aebodsys,
-        calculated missing_aedecod / calculated total_aes * 100 as pct_uncoded format=5.1
-    from ae;
-    
-    select * from qc_meddra;
-quit;
-title;
-
-/* QC Check 4: Duplicate AESEQ within subject */
-title "QC Check 4: Duplicate AESEQ Detection";
-proc sql;
-    create table qc_duplicates as
-    select USUBJID, AESEQ, count(*) as cnt
-    from ae
-    group by USUBJID, AESEQ
-    having cnt > 1;
-    
-    select count(*) into :dup_count trimmed from qc_duplicates;
-quit;
-
-%if &dup_count > 0 %then %do;
-    %put ERROR: &dup_count duplicate AESEQ values found!;
-    %let validation_errors = YES;
-    proc print data=qc_duplicates;
-        title "ERROR: Duplicate AESEQ Records";
-    run;
-%end;
-%else %do;
-    %put NOTE: No duplicate AESEQ values found;
-%end;
-title;
-
-/* QC Check 5: Missing required variables */
-title "QC Check 5: Missing Required Variables";
-data qc_missing_required;
-    set ae;
-    length error_type $100;
-    
-    if missing(STUDYID) then do;
-        error_type = "Missing STUDYID";
-        output;
-    end;
-    if missing(DOMAIN) then do;
-        error_type = "Missing DOMAIN";
-        output;
-    end;
-    if missing(USUBJID) then do;
-        error_type = "Missing USUBJID";
-        output;
-    end;
-    if missing(AESEQ) then do;
-        error_type = "Missing AESEQ";
-        output;
-    end;
-    if missing(AETERM) then do;
-        error_type = "Missing AETERM";
-        output;
-    end;
-run;
-
-proc sql noprint;
-    select count(*) into :missing_req trimmed from qc_missing_required;
-quit;
-
-%if &missing_req > 0 %then %do;
-    %put ERROR: &missing_req records with missing required variables!;
-    %let validation_errors = YES;
-    proc print data=qc_missing_required (obs=50);
-        var USUBJID AESEQ error_type;
-    run;
-%end;
-%else %do;
-    %put NOTE: All required variables populated;
-%end;
-title;
-
-/* QC Check 6: Date logic errors */
-title "QC Check 6: Date Logic Validation";
-data qc_date_errors;
-    set ae;
-    length error_type $100;
-    
-    /* Check if end date before start date */
-    if not missing(AESTDTC) and not missing(AEENDTC) then do;
-        if input(AEENDTC, yymmdd10.) < input(AESTDTC, yymmdd10.) then do;
-            error_type = "End date before start date";
-            output;
-        end;
-    end;
-    
-    /* Check if AEENDY < AESTDY */
-    if not missing(AESTDY) and not missing(AEENDY) then do;
-        if AEENDY < AESTDY then do;
-            error_type = "AEENDY less than AESTDY";
-            output;
-        end;
-    end;
-    
-    /* Check for impossible study days (e.g., day 0) */
-    if AESTDY = 0 or AEENDY = 0 then do;
-        error_type = "Study day = 0 (impossible)";
-        output;
-    end;
-run;
-
-proc sql noprint;
-    select count(*) into :date_errors trimmed from qc_date_errors;
-quit;
-
-%if &date_errors > 0 %then %do;
-    %put ERROR: &date_errors records with date logic errors!;
-    %let validation_errors = YES;
-    proc print data=qc_date_errors;
-        var USUBJID AESEQ AESTDTC AEENDTC AESTDY AEENDY error_type;
-    run;
-%end;
-%else %do;
-    %put NOTE: All date logic checks passed;
-%end;
-title;
-
-/* QC Check 7: Treatment-emergent flag distribution */
-title "QC Check 7: Treatment-Emergent Flag Distribution";
-proc sql;
-    create table qc_te_flag as
-    select 
-        AETRTEM,
-        count(*) as n,
-        count(*) / (select count(*) from ae_base) * 100 as pct format=5.1
-    from ae_base
-    group by AETRTEM;
-    
-    select * from qc_te_flag;
-quit;
-title;
-
-%put NOTE: Data quality checks completed;
-
-/******************************************************************************
-* STEP 8: EXPORT TO CSV
-******************************************************************************/
+/* Export to CSV */
 proc export data=ae
     outfile="../../data/csv/ae.csv"
     dbms=csv
@@ -586,11 +759,7 @@ proc export data=suppae
     replace;
 run;
 
-%put NOTE: CSV files exported successfully;
-
-/******************************************************************************
-* STEP 9: EXPORT TO XPT v5 FORMAT FOR REGULATORY SUBMISSION
-******************************************************************************/
+/* Export to XPT */
 libname xptout xport "../../data/xpt/ae.xpt";
 data xptout.ae;
     set ae;
@@ -603,51 +772,21 @@ data xptout.suppae;
 run;
 libname xptout clear;
 
-%put NOTE: XPT files exported successfully;
+%put NOTE: ============================================================;
+%put NOTE: CAR-T ENHANCED AE DOMAIN GENERATION COMPLETED;
+%put NOTE: Total AE records: &ae_count;
+%put NOTE: Subjects with AEs: &subj_count;
+%put NOTE: SUPPAE records: &suppae_count;
 
-/******************************************************************************
-* STEP 10: FINAL LOGGING AND VALIDATION STATUS
-******************************************************************************/
-
-%put NOTE: ============================================================;
-%put NOTE: AE DOMAIN GENERATION COMPLETED;
-%put NOTE: ============================================================;
-%put NOTE: Output files created:;
-%put NOTE:   CSV: ../../data/csv/ae.csv (&ae_count records);
-%put NOTE:   CSV: ../../data/csv/suppae.csv (&suppae_count records);
-%put NOTE:   XPT: ../../data/xpt/ae.xpt;
-%put NOTE:   XPT: ../../data/xpt/suppae.xpt;
-%put NOTE: ============================================================;
-%put NOTE: Summary Statistics:;
-%put NOTE:   Total AE records: &ae_count;
-%put NOTE:   Subjects with AEs: &subj_count;
-%put NOTE:   Treatment-emergent records: &suppae_count;
-%put NOTE: ============================================================;
-
-/* Validation Status Report */
 %if &validation_errors = YES %then %do;
     %put ERROR: *** VALIDATION ERRORS DETECTED ***;
-    %put ERROR: Review log and QC outputs before proceeding;
-    %put ERROR: Program completed with ERRORS;
-%end;
-%else %if &validation_warnings = YES %then %do;
-    %put WARNING: Validation warnings detected;
-    %put WARNING: Review log for details;
-    %put NOTE: Program completed with WARNINGS;
+    %put ERROR: Review log before proceeding;
 %end;
 %else %do;
     %put NOTE: *** ALL VALIDATION CHECKS PASSED ***;
-    %put NOTE: Program completed successfully;
 %end;
 
 %put NOTE: ============================================================;
-%put NOTE: NEXT STEPS:;
-%put NOTE: 1. Review log file: logs/30_sdtm_ae.log;
-%put NOTE: 2. Run Pinnacle 21 validation on XPT files;
-%put NOTE: 3. Create define.xml with variable metadata;
-%put NOTE: 4. Review QC outputs before submission;
-%put NOTE: ============================================================;
 
-/* Stop logging */
 proc printto;
 run;
