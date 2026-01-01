@@ -1,0 +1,11 @@
+codelist,ct_package,ct_version,external_ref
+Sex,SDTM,SDTM 2024-06-28,C66731
+Race,SDTM,SDTM 2024-06-28,C74457
+Ethnicity,SDTM,SDTM 2024-06-28,C66790
+Country,ISO,ISO 3166-1 Alpha-3,ISO3166
+Age Unit,SDTM,SDTM 2024-06-28,C66781
+Trial Arm,SDTM,SDTM 2024-06-28,Custom
+Domain Code,SDTM,SDTM 2024-06-28,C49558
+Test Code,CDISC,CDISC CT 2024-06-28,C67154
+RECIST Response,NCI,NCI Thesaurus,C99073
+Tumor Assessment,NCI,NCI Thesaurus,C15220

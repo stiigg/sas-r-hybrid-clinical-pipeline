@@ -1,0 +1,47 @@
+################################################################################
+# Study Configuration for Define-XML Generation
+################################################################################
+
+study:
+  id: "STUDY001"
+  name: "STUDY001 Clinical Trial"
+  protocol: "STUDY001-Protocol-v1.0"
+  sponsor: "Your Organization"
+  indication: "Oncology"
+  
+standards:
+  sdtm:
+    name: "SDTMIG"
+    version: "3.4"
+    ct_version: "SDTM 2024-06-28"
+  
+  adam:
+    name: "ADaMIG"
+    version: "1.3"
+    ct_version: "ADaM 2024-06-28"
+
+define_xml:
+  version: "2.1"
+  stylesheet: "define2-1-0.xsl"
+  context: "Submission"
+
+paths:
+  sdtm_data: "sdtm/data"
+  sdtm_specs: "sdtm/specs"
+  adam_data: "outputs/adam"
+  adam_specs: "adam/specs"
+  output: "regulatory_submission/define_xml/outputs"
+  metadata: "regulatory_submission/define_xml/metadata"
+
+pinnacle21:
+  community_path: "/opt/pinnacle21/P21Community.jar"
+  java_opts: "-Xmx4G"
+  
+validation:
+  rules:
+    - "NOT_NULL"
+    - "UNIQUE"
+    - "CONTROLLED_TERM"
+    - "ISO8601_DATE"
+    - "RANGE"
+    - "LENGTH_CHECK"
