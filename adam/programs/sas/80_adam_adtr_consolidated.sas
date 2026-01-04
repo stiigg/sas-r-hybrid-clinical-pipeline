@@ -1,9 +1,9 @@
 /******************************************************************************
 * Program: 80_adam_adtr_consolidated.sas
-* Version: 3.0 - Unified Modular Architecture
+* Version: 3.1 - Integrated Import Macros
 * Purpose: ADTR (Tumor Results Analysis Dataset) per RECIST 1.1
 * Author: Christian Baghai
-* Date: 2026-01-03
+* Date: 2026-01-04
 * 
 * EXECUTION MODES:
 *   MODE 1: Basic SDIAM parameter (legacy functionality, fast execution)
@@ -23,7 +23,7 @@
 *
 * DEPENDENCIES:
 *   - SDTM: TR (Tumor Results), TU (Tumor Identification), DM or ADSL
-*   - Package: ADTR_CORE v1.0+
+*   - Package: ADTR_CORE v1.1+
 *
 * REFERENCES:
 *   - PharmaSUG 2025-SA-287: Efficacy roadmap for early phase oncology
@@ -37,6 +37,7 @@
 *   v1.0 (2026-01-03): Basic SLD/SDIAM implementation
 *   v2.0 (2026-01-03): Enhanced BDS with multiple parameters
 *   v3.0 (2026-01-03): Consolidated modular architecture
+*   v3.1 (2026-01-04): Integrated import_tr/import_tu macros with validation
 ******************************************************************************/
 
 /* ========================================
@@ -74,26 +75,24 @@ options mprint mlogic symbolgen;  /* Enable macro debugging if needed */
 title "ADTR v&PROGRAM_VERSION: Data Import and Validation";
 
 %put NOTE: ------------------------------------------------;
-%put NOTE: STEP 1: Importing SDTM datasets;
+%put NOTE: STEP 1: Importing SDTM datasets with validation;
 %put NOTE: ------------------------------------------------;
 
-/* Import TR (Tumor Results) */
-%put NOTE: Importing TR (Tumor Results) from &SDTM_PATH...;
-proc import datafile="&SDTM_PATH/tr.csv"
-    out=work.tr_raw
-    dbms=csv
-    replace;
-    guessingrows=max;
-run;
+/* Import TR (Tumor Results) with validation */
+%put NOTE: Importing TR (Tumor Results) with built-in validation...;
+%import_tr(
+    path=&SDTM_PATH,
+    outds=work.tr_raw,
+    validate=1
+);
 
-/* Import TU (Tumor Identification) */
-%put NOTE: Importing TU (Tumor Identification) from &SDTM_PATH...;
-proc import datafile="&SDTM_PATH/tu.csv"
-    out=work.tu_raw
-    dbms=csv
-    replace;
-    guessingrows=max;
-run;
+/* Import TU (Tumor Identification) with validation */
+%put NOTE: Importing TU (Tumor Identification) with built-in validation...;
+%import_tu(
+    path=&SDTM_PATH,
+    outds=work.tu_raw,
+    validate=1
+);
 
 /* Import ADSL (if exists, otherwise create minimal version from DM) */
 %macro import_adsl_safe;
@@ -137,17 +136,20 @@ run;
 
 %import_adsl_safe;
 
-/* Basic data validation */
+/* Data import summary already provided by validation macros */
+%put NOTE: ------------------------------------------------;
+%put NOTE: Data import with validation complete;
+%put NOTE: ------------------------------------------------;
+
+/* Additional summary from ADSL */
 proc sql noprint;
-    select count(*) into :n_tr_records trimmed from work.tr_raw;
-    select count(*) into :n_tu_records trimmed from work.tu_raw;
-    select count(*) into :n_subjects trimmed from work.adsl;
+    select count(*) into :n_subjects_adsl trimmed from work.adsl;
 quit;
 
-%put NOTE: Data Import Summary:;
-%put NOTE:   TR records: &n_tr_records;
-%put NOTE:   TU records: &n_tu_records;
-%put NOTE:   Subjects: &n_subjects;
+%put NOTE: Final Data Summary:;
+%put NOTE:   TR records: &n_records (from import_tr validation);
+%put NOTE:   TU records: (validated by import_tu);
+%put NOTE:   ADSL subjects: &n_subjects_adsl;
 
 /* ========================================
    STEP 2: FRAMEWORK DEMONSTRATION
@@ -223,13 +225,14 @@ run;
 %put NOTE: Full ADTR derivation logic from v1.0 and v2.0 will be refactored;
 %put NOTE: into the hierarchical macro library structure:;
 %put NOTE: ;
-%put NOTE: - macros/level1_utilities/ : Data import and validation;
+%put NOTE: - macros/level1_utilities/ : Data import and validation (COMPLETE);
 %put NOTE: - macros/level2_derivations/ : Baseline, nadir, percent change;
 %put NOTE: - macros/level3_parameters/ : LDIAM, SDIAM, SNTLDIAM derivations;
 %put NOTE: - macros/bds_structure/ : PARCAT, CRIT, ANL flags;
 %put NOTE: - macros/qc_validation/ : Quality control checks;
 %put NOTE: - macros/export/ : Output management;
 %put NOTE: ;
+%put NOTE: Update v3.1: import_tr and import_tu now integrated with validation;
 %put NOTE: Each macro follows self-documenting standards per;
 %put NOTE: PharmaSUG 2024-SD-211 with embedded validation.;
 %put NOTE: ------------------------------------------------;
@@ -245,23 +248,24 @@ run;
 %put NOTE: ================================================;
 %put NOTE: ADTR Program Execution Complete;
 %put NOTE: ================================================;
-%put NOTE: Program Version: &PROGRAM_VERSION;
+%put NOTE: Program Version: &PROGRAM_VERSION (v3.1);
 %put NOTE: Execution Mode: &ADTR_MODE;
 %put NOTE: Study: &STUDY_ID;
 %put NOTE: CDISC ADaM Version: &CDISC_ADAM_VERSION;
 %put NOTE: RECIST Version: &RECIST_VERSION;
 %put NOTE: ------------------------------------------------;
-%put NOTE: Framework Status: Architecture established;
-%put NOTE: Data Import: Complete;
+%put NOTE: Framework Status: Level 1 utilities integrated;
+%put NOTE: Data Import: Complete with validation;
+%put NOTE: Import Macros: import_tr v2.0, import_tu loaded;
 %put NOTE: Baseline Demo: %sysfunc(ifc(%sysmacexist(derive_baseline), Complete, Skipped));
 %put NOTE: ------------------------------------------------;
 %put NOTE: Execution Time: %sysfunc(putn(&ELAPSED_MIN, 8.2)) minutes;
 %put NOTE: End Time: %sysfunc(putn(&END_TIME, datetime20.));
 %put NOTE: ================================================;
 %put NOTE: Next Steps:;
-%put NOTE: 1. Review architecture in README.md;
-%put NOTE: 2. Refactor v1.0/v2.0 logic into modular macros;
-%put NOTE: 3. Run unit tests in validation/unit_tests/;
+%put NOTE: 1. Review enhanced import validation in log;
+%put NOTE: 2. Refactor v1.0/v2.0 logic into Level 2+ macros;
+%put NOTE: 3. Run integration tests in validation/integration_tests/;
 %put NOTE: 4. Configure execution mode in config/global_parameters.sas;
 %put NOTE: ================================================;
 
