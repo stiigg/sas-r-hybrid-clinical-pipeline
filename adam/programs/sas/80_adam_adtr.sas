@@ -2,8 +2,8 @@
 * Program: 80_adam_adtr.sas
 * Purpose: Tumor Measurements Analysis Dataset (RECIST 1.1)
 * Author:  Christian Baghai
-* Date:    2026-01-03
-* Version: 1.0 - NEXICART-2 solid tumor expansion cohort
+* Date:    2026-01-04
+* Version: 1.1 - Integrated validated import macros
 * 
 * Input:   sdtm/data/csv/tu.csv, sdtm/data/csv/tr.csv, sdtm/data/csv/dm.csv
 * Output:  adam/data/adtr.csv, adam/data/xpt/adtr.xpt
@@ -21,6 +21,10 @@
 * Reference: RECIST 1.1 - Eisenhauer et al. Eur J Cancer 2009;45(2):228-247
 *            Vitale et al. JNCI 2025 (censoring transparency)
 *            PharmaSUG 2025-SA-287 (efficacy roadmap)
+* 
+* Version History:
+*   v1.0 (2026-01-03): Initial implementation
+*   v1.1 (2026-01-04): Integrated validated import macros (import_tr, import_tu)
 ******************************************************************************/
 
 %let STUDYID = NEXICART2-SOLID-TUMOR;
@@ -28,23 +32,48 @@
 libname sdtm "../../sdtm/data/csv";
 libname adam "../../adam/data";
 
+/* Set project root if not already defined */
+%let PROJ_ROOT = %sysget(PROJ_ROOT);
+%if %length(&PROJ_ROOT) = 0 %then %do;
+    %let PROJ_ROOT = /workspace/sas-r-hybrid-clinical-pipeline;
+    %put WARNING: PROJ_ROOT not set, using default: &PROJ_ROOT;
+%end;
+
+/* Load foundation utilities */
+%include "&PROJ_ROOT/adam/programs/sas/macros/level1_utilities/import_tr.sas";
+%include "&PROJ_ROOT/adam/programs/sas/macros/level1_utilities/import_tu.sas";
+
 /* ========================================
    STEP 1: Import Required Datasets
    ======================================== */
 
 title "NEXICART-2 ADTR: Import Source Datasets";
 
-/* Import SDTM TR (Tumor Results) */
+/* Import SDTM TR (Tumor Results) with validation */
+%import_tr(
+    path=../../sdtm/data/csv,
+    outds=work.tr_import,
+    validate=1
+);
+
+/* Filter and prepare TR data */
 data tr_raw;
-    set sdtm.tr;
+    set work.tr_import;
     where TRTESTCD = 'LDIAM';  /* Longest diameter measurements */
     keep USUBJID TRDTC TRDY TRLNKID TRTESTCD TRORRES TRSTRESC TRSTRESN 
          VISIT VISITNUM TRLOC TRMETHOD;
 run;
 
-/* Import SDTM TU (Tumor Identification) for target/non-target classification */
+/* Import SDTM TU (Tumor Identification) with validation */
+%import_tu(
+    path=../../sdtm/data/csv,
+    outds=work.tu_import,
+    validate=1
+);
+
+/* Prepare TU data for target/non-target classification */
 data tu_raw;
-    set sdtm.tu;
+    set work.tu_import;
     keep USUBJID TULNKID TUTESTCD TUORRES TUSTRESC TUEVAL TULOC;
 run;
 
@@ -307,12 +336,13 @@ proc contents data=adtr varnum;
 run;
 
 %put NOTE: ============================================;
-%put NOTE: ADTR dataset created successfully;
+%put NOTE: ADTR dataset created successfully (v1.1);
 %put NOTE: Parameters derived:;
 %put NOTE:   - SLD (Sum of Longest Diameters);
 %put NOTE:   - Baseline and Nadir values;
 %put NOTE:   - Percent changes from baseline and nadir;
 %put NOTE: Quality checks per Vitale 2025 included;
+%put NOTE: Import validation: import_tr v2.0, import_tu integrated;
 %put NOTE: Ready for ADRS (BOR) derivation input;
 %put NOTE: Output: adam/data/adtr.csv, adam/data/xpt/adtr.xpt;
 %put NOTE: ============================================;

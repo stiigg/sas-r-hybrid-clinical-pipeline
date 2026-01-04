@@ -1,99 +1,112 @@
 /******************************************************************************
-* File: config/global_parameters.sas
-* Purpose: Centralized configuration for ADTR program execution
-* Author: Christian Baghai
-* Date: 2026-01-03
+* Program: global_parameters.sas
 * Version: 1.0
+* Purpose: Global configuration parameters for ADTR pipeline
+* Author: Christian Baghai
+* Date: 2026-01-04
 *
-* Description:
-*   Configuration-driven approach for ADTR derivation following metadata-driven
-*   development principles (PharmaSUG 2025-AI-239). Enables Mode 1 (Basic SDIAM)
-*   or Mode 2 (Enhanced BDS) execution through simple parameter changes.
+* USAGE:
+*   %include "config/global_parameters.sas";
+*   (All parameters become available as macro variables)
 *
-* Usage:
-*   %include "&PROJ_ROOT/adam/programs/sas/config/global_parameters.sas";
+* MODIFICATION INSTRUCTIONS:
+*   1. Update SDTM_PATH and ADAM_PATH for your environment
+*   2. Set ADTR_MODE: 1=Basic (SDIAM only), 2=Enhanced (all parameters)
+*   3. Configure validation options per your SOPs
+*   4. Set algorithm options per protocol requirements
 *
-* References:
-*   - PharmaSUG 2025-SD-116: SAS Packages framework
-*   - PharmaSUG 2025-AI-239: Metadata-driven development
+* NOTES:
+*   - This file is included by package_loader.sas automatically
+*   - Changes here affect all programs using ADTR_CORE package
+*   - Document any deviations from defaults in study-specific documentation
 ******************************************************************************/
 
-/* ========================================
-   EXECUTION MODE CONTROL
-   ======================================== */
-%let ADTR_MODE = 2;              /* 1=Basic SDIAM only, 2=Enhanced BDS */
-%let STUDY_ID = NEXICART2-SOLID-TUMOR;
-%let PROTOCOL_VERSION = 2.0;
+%put NOTE: ================================================;
+%put NOTE: Loading Global Parameters v1.0;
+%put NOTE: ================================================;
 
-/* ========================================
-   QUALITY CONTROL OPTIONS
-   ======================================== */
-%let DEBUG_MODE = 0;             /* 0=Standard, 1=Verbose, 2=Debug */
+/* ============================================
+   EXECUTION MODE
+   ============================================ */
+%global ADTR_MODE;
+%let ADTR_MODE = 2;              /* 1=Basic SDIAM, 2=Enhanced BDS */
+
+%put NOTE: [CONFIG] Execution Mode: &ADTR_MODE;
+%if &ADTR_MODE = 1 %then %put NOTE: [CONFIG]   Mode 1: Basic SDIAM parameter (fast execution);
+%if &ADTR_MODE = 2 %then %put NOTE: [CONFIG]   Mode 2: Enhanced BDS with LDIAM+SDIAM+SNTLDIAM;
+
+/* ============================================
+   PATH CONFIGURATION
+   ============================================ */
+%global SDTM_PATH ADAM_PATH OUTPUT_PATH;
+%let SDTM_PATH = ../../sdtm/data/csv;
+%let ADAM_PATH = ../../adam/data;
+%let OUTPUT_PATH = ../../adam/output;
+
+%put NOTE: [CONFIG] Paths:;
+%put NOTE: [CONFIG]   SDTM: &SDTM_PATH;
+%put NOTE: [CONFIG]   ADaM: &ADAM_PATH;
+%put NOTE: [CONFIG]   Output: &OUTPUT_PATH;
+
+/* ============================================
+   VALIDATION OPTIONS
+   ============================================ */
+%global VALIDATE_IMPORTS STOP_ON_ERROR DEBUG_MODE;
+%let VALIDATE_IMPORTS = 1;       /* 1=Run validation on all imports, 0=Skip */
+%let STOP_ON_ERROR = 1;          /* 1=Abort on validation errors, 0=Continue with warnings */
+%let DEBUG_MODE = 0;             /* 0=Standard, 1=Verbose, 2=Full debug */
+
+%put NOTE: [CONFIG] Validation Options:;
+%put NOTE: [CONFIG]   Validate Imports: %sysfunc(ifc(&VALIDATE_IMPORTS=1, YES, NO));
+%put NOTE: [CONFIG]   Stop on Error: %sysfunc(ifc(&STOP_ON_ERROR=1, YES, NO));
+%put NOTE: [CONFIG]   Debug Mode: &DEBUG_MODE;
+
+/* ============================================
+   ALGORITHM OPTIONS
+   ============================================ */
+%global APPLY_ENAWORU_RULE BASELINE_METHOD NADIR_EXCLUDE_BASELINE RECIST_VERSION;
+%let APPLY_ENAWORU_RULE = 1;     /* 1=Use 25mm nadir rule (Enaworu et al.), 0=Standard */
+%let BASELINE_METHOD = PRETREAT; /* PRETREAT=Pre-treatment scan, FIRST=First available */
+%let NADIR_EXCLUDE_BASELINE = 1; /* 1=Exclude baseline from nadir (Vitale et al.), 0=Include */
+%let RECIST_VERSION = 1.1;       /* RECIST version: 1.1 or 1.0 */
+
+%put NOTE: [CONFIG] Algorithm Options:;
+%put NOTE: [CONFIG]   Enaworu Rule (25mm nadir): %sysfunc(ifc(&APPLY_ENAWORU_RULE=1, ENABLED, DISABLED));
+%put NOTE: [CONFIG]   Baseline Method: &BASELINE_METHOD;
+%put NOTE: [CONFIG]   Nadir Excludes Baseline: %sysfunc(ifc(&NADIR_EXCLUDE_BASELINE=1, YES, NO));
+%put NOTE: [CONFIG]   RECIST Version: &RECIST_VERSION;
+
+/* ============================================
+   QUALITY CONTROL
+   ============================================ */
+%global RUN_VALIDATION VALIDATION_OUTPUT;
 %let RUN_VALIDATION = 1;         /* 1=Run QC checks, 0=Skip */
-%let COMPARE_BASELINE = 0;       /* 1=Compare against archived output */
+%let VALIDATION_OUTPUT = &OUTPUT_PATH/validation;
 
-/* ========================================
-   OUTPUT OPTIONS
-   ======================================== */
-%let EXPORT_CSV = 1;             /* 1=Create CSV, 0=Skip */
-%let EXPORT_XPT = 1;             /* 1=Create XPT transport, 0=Skip */
-%let EXPORT_SAS7BDAT = 1;        /* 1=Create SAS dataset, 0=Skip */
-%let CREATE_METADATA = 1;        /* 1=Generate define.xml prep, 0=Skip */
+%put NOTE: [CONFIG] Quality Control:;
+%put NOTE: [CONFIG]   Run Validation: %sysfunc(ifc(&RUN_VALIDATION=1, YES, NO));
+%put NOTE: [CONFIG]   Validation Output: &VALIDATION_OUTPUT;
 
-/* ========================================
-   ALGORITHM OPTIONS (MODE-SPECIFIC)
-   ======================================== */
-%let APPLY_ENAWORU_RULE = 1;     /* 1=Use 25mm nadir rule, 0=Standard */
-%let BASELINE_METHOD = PRETREAT; /* PRETREAT=ADY<1, FIRST=First visit */
-%let NADIR_EXCLUDE_BASELINE = 1; /* 1=Vitale 2025 method, 0=Include baseline */
-%let MIN_TARGET_LESIONS = 1;     /* Minimum required target lesions */
-
-/* ========================================
-   PATH DEFINITIONS
-   ======================================== */
-%let PROJ_ROOT = %sysget(PROJ_ROOT);
-%if %length(&PROJ_ROOT) = 0 %then %do;
-    /* Default path if environment variable not set */
-    %let PROJ_ROOT = /workspace/sas-r-hybrid-clinical-pipeline;
-%end;
-
-%let SDTM_PATH = &PROJ_ROOT/sdtm/data/csv;
-%let ADAM_PATH = &PROJ_ROOT/adam/data;
-%let MACRO_PATH = &PROJ_ROOT/adam/programs/sas/macros;
-%let OUTPUT_PATH = &ADAM_PATH;
-%let LOG_PATH = &PROJ_ROOT/logs;
-
-/* Create log directory if it doesn't exist */
-options dlcreatedir;
-libname _tmplog "&LOG_PATH";
-libname _tmplog clear;
-
-/* ========================================
-   VERSION CONTROL
-   ======================================== */
-%let PROGRAM_VERSION = 3.0;
-%let LAST_MODIFIED = 2026-01-03;
+/* ============================================
+   STUDY METADATA
+   ============================================ */
+%global STUDY_ID PROGRAM_VERSION CDISC_ADAM_VERSION SPONSOR;
+%let STUDY_ID = NEXICART2-SOLID-TUMOR;
+%let PROGRAM_VERSION = 3.1;
 %let CDISC_ADAM_VERSION = 1.3;
-%let RECIST_VERSION = 1.1;
+%let SPONSOR = Generic Sponsor;
 
-/* ========================================
-   DISPLAY CONFIGURATION
-   ======================================== */
-%put NOTE: ================================================;
-%put NOTE: ADTR Configuration Loaded;
-%put NOTE: ================================================;
-%put NOTE: Execution Mode: &ADTR_MODE;
-%put NOTE: Study ID: &STUDY_ID;
-%put NOTE: Protocol Version: &PROTOCOL_VERSION;
-%put NOTE: ------------------------------------------------;
-%put NOTE: Algorithm Options:;
-%put NOTE:   ENAWORU Rule: &APPLY_ENAWORU_RULE;
-%put NOTE:   Baseline Method: &BASELINE_METHOD;
-%put NOTE:   Nadir Exclude Baseline: &NADIR_EXCLUDE_BASELINE;
-%put NOTE: ------------------------------------------------;
-%put NOTE: Quality Control:;
-%put NOTE:   Debug Mode: &DEBUG_MODE;
-%put NOTE:   Run Validation: &RUN_VALIDATION;
-%put NOTE: ------------------------------------------------;
-%put NOTE: Project Root: &PROJ_ROOT;
+%put NOTE: [CONFIG] Study Metadata:;
+%put NOTE: [CONFIG]   Study ID: &STUDY_ID;
+%put NOTE: [CONFIG]   Program Version: &PROGRAM_VERSION;
+%put NOTE: [CONFIG]   CDISC ADaM Version: &CDISC_ADAM_VERSION;
+%put NOTE: [CONFIG]   Sponsor: &SPONSOR;
+
+/* ============================================
+   DATE/TIME STAMP
+   ============================================ */
+%global CONFIG_LOAD_TIME;
+%let CONFIG_LOAD_TIME = %sysfunc(datetime());
+
+%put NOTE: [CONFIG] Configuration loaded: %sysfunc(putn(&CONFIG_LOAD_TIME, datetime20.));
 %put NOTE: ================================================;
