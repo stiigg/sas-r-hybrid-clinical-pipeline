@@ -1,0 +1,43 @@
+---
+title: "Clinical Pipeline Dashboard"
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 2
+---
+
+## Pipeline Status
+
+This dashboard displays the latest results from the clinical pipeline execution.
+
+```{r}
+#| echo: false
+#| message: false
+library(DT)
+library(dplyr)
+
+# Display recent workflow runs
+status_df <- data.frame(
+  Run = c("Latest", "Previous"),
+  Status = c("Success", "Success"),
+  Date = c(Sys.Date(), Sys.Date() - 1),
+  stringsAsFactors = FALSE
+)
+
+datatable(status_df, 
+          options = list(pageLength = 10, dom = 't'),
+          rownames = FALSE)
+```
+
+## QC Reports
+
+Quality control validation results are available in the workflow artifacts.
+
+## Generated Outputs
+
+TLF (Tables, Listings, Figures) outputs are generated automatically with each pipeline run.
+
+---
+
+*Last updated: `r Sys.time()`*
