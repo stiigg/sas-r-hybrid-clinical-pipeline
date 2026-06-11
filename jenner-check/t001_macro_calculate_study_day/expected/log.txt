@@ -1,0 +1,30 @@
+Jenner 0.1.0 (Unlicensed - limited to 100 observations)
+Get a license at https://jenneranalytics.com/license
+
+NOTE: ================================================
+NOTE: CALCULATE_STUDY_DAY utility - demonstration
+NOTE: ================================================
+NOTE: Option OBS changed to 100.
+NOTE: DATA raw_ae
+
+NOTE: Processing inline DATALINES (5 lines)
+
+NOTE: Read 5 rows from DATALINES.
+NOTE: Wrote raw_ae (5 rows, 5 columns).
+NOTE: DATA elapsed:
+  wall  0.00 seconds
+  cpu   0.00 seconds
+NOTE: DATA ae
+
+
+NOTE: Read 5 rows from raw_ae.
+NOTE: Wrote ae (5 rows, 7 columns).
+NOTE: DATA elapsed:
+  wall  0.00 seconds
+  cpu   0.00 seconds
+NOTE: Option TITLE changed to Adverse Events with Derived Study Days (SDTMIG 3.4).
+NOTE: PROC PRINT data=ae
+
+NOTE: PROC PRINT completed: 5 observations printed, 6 variables
+NOTE: Study-day derivation complete. AESTDY must never be 0
+NOTE: (pre-reference dates negative, on/after positive starting at 1).
