@@ -1,0 +1,8 @@
+{
+  "bundle": "t002_macro_add_anl_flags",
+  "source_file": "adam/programs/sas/macros/level4_bds_structure/add_anl_flags.sas",
+  "source_blob_sha": "4def47554c5165082ef29430e208128bc080cbb3",
+  "source_commit": "7f5274d7fb5ad378d02f4242a9497ad8f4388b54",
+  "tier": "macro_caller",
+  "notes": "Inlines the repo's ADD_ANL_FLAGS macro (CDISC ADaM ANL01FL-ANL04FL analysis-subset flags) and exercises it with small inline ADSL + ADTR fixtures. Driver written for this bundle; macro body verbatim from source. Exercises PROC SQL join + group-by, DATA-step BY-processing, PROC FREQ, PROC PRINT."
+}

@@ -1,0 +1,19 @@
+{
+  "_captured_at": "2026-06-11T20:38:14Z",
+  "_captured_run_id": "r_019eb8672b9b759296715be31875c3a6",
+  "status": "ok",
+  "exit_code": 0,
+  "log_contains": [
+    "ADD_ANL_FLAGS - CDISC analysis subset flags",
+    "[ADD_ANL_FLAGS] Analysis flags complete.",
+    "Analysis-flag derivation complete."
+  ],
+  "log_does_not_contain": [
+    "ERROR:",
+    "[JENNER-ERROR"
+  ],
+  "diagnostics": {
+    "parse_warnings": [],
+    "runtime_warnings": []
+  }
+}

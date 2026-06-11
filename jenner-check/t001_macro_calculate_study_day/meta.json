@@ -1,0 +1,8 @@
+{
+  "bundle": "t001_macro_calculate_study_day",
+  "source_file": "sdtm/macros/study_day_calculation.sas",
+  "source_blob_sha": "eb8bd80fe152fbb3702a86769efff5506dbb1620",
+  "source_commit": "7f5274d7fb5ad378d02f4242a9497ad8f4388b54",
+  "tier": "macro_caller",
+  "notes": "Inlines the repo's CALCULATE_STUDY_DAY utility macro (SDTMIG 3.4 study-day rule) and exercises it with a small inline AE-style fixture (RFSTDTC + AESTDT/AEENDT). Driver written for this bundle; macro body verbatim from source."
+}

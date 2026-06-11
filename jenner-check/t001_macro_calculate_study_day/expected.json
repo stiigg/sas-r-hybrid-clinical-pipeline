@@ -1,0 +1,18 @@
+{
+  "_captured_at": "2026-06-11T20:37:57Z",
+  "_captured_run_id": "r_019eb864dcab75828b9637fa90fdaa9e",
+  "status": "ok",
+  "exit_code": 0,
+  "log_contains": [
+    "CALCULATE_STUDY_DAY utility - demonstration",
+    "Study-day derivation complete. AESTDY must never be 0"
+  ],
+  "log_does_not_contain": [
+    "ERROR:",
+    "[JENNER-ERROR"
+  ],
+  "diagnostics": {
+    "parse_warnings": [],
+    "runtime_warnings": []
+  }
+}

@@ -1,0 +1,85 @@
+Jenner 0.1.0 (Unlicensed - limited to 100 observations)
+Get a license at https://jenneranalytics.com/license
+
+NOTE: ================================================
+NOTE: ADD_ANL_FLAGS - CDISC analysis subset flags
+NOTE: ================================================
+NOTE: Option OBS changed to 100.
+NOTE: DATA work.adsl
+
+NOTE: Processing inline DATALINES (3 lines)
+
+NOTE: Read 3 rows from DATALINES.
+NOTE: Wrote work.adsl (3 rows, 4 columns).
+NOTE: DATA elapsed:
+  wall  0.00 seconds
+  cpu   0.00 seconds
+NOTE: DATA work.adtr
+
+NOTE: Processing inline DATALINES (7 lines)
+
+NOTE: Read 7 rows from DATALINES.
+NOTE: Wrote work.adtr (7 rows, 6 columns).
+NOTE: DATA elapsed:
+  wall  0.00 seconds
+  cpu   0.00 seconds
+NOTE: [ADD_ANL_FLAGS] Adding analysis subset flags...
+NOTE: [ADD_ANL_FLAGS] Input dataset: work.adtr
+NOTE: [ADD_ANL_FLAGS] ADSL dataset: work.adsl
+NOTE: [ADD_ANL_FLAGS] ANL04FL validation PASSED
+NOTE: [ADD_ANL_FLAGS] Analysis flags complete.
+NOTE: PROC SQL 
+
+NOTE: Table _anl_prep created.
+NOTE: PROC SQL statement used.
+NOTE: DATA _anl_step1
+
+
+NOTE: Read 7 rows from _anl_prep.
+NOTE: Wrote _anl_step1 (7 rows, 10 columns).
+NOTE: DATA elapsed:
+  wall  0.00 seconds
+  cpu   0.00 seconds
+NOTE: PROC SORT data=_anl_step1
+
+NOTE: Unlicensed mode - input limited to 100 observations.
+NOTE: Read 7 rows from _anl_step1.
+NOTE: Wrote _anl_step1 (7 rows, 10 columns).
+NOTE: PROC SORT statement used.
+NOTE: DATA work.adtr_anl
+
+
+NOTE: Read 7 rows from _anl_step1.
+NOTE: Wrote work.adtr_anl (7 rows, 10 columns).
+NOTE: DATA elapsed:
+  wall  0.00 seconds
+  cpu   0.00 seconds
+NOTE: PROC FREQ
+NOTE: ODS plot written: freq_anl01fl.spec.json
+NOTE: ODS plot written: freq_anl02fl.spec.json
+NOTE: ODS plot written: freq_anl03fl.spec.json
+NOTE: ODS plot written: freq_anl04fl.spec.json
+NOTE: PROC FREQ statement used.
+NOTE: PROC SQL 
+
+NOTE: Table _anl_summary created.
+NOTE: PROC SQL statement used.
+NOTE: PROC PRINT data=_anl_summary
+
+NOTE: PROC PRINT completed: 1 observations printed, 5 variables
+NOTE: PROC SQL 
+
+NOTE: Table _anl_validation created.
+NOTE: PROC SQL statement used.
+NOTE: PROC DATASETS library=WORK
+
+NOTE: Deleting _ANL_PREP (memtype=DATA).
+NOTE: Deleting _ANL_STEP1 (memtype=DATA).
+NOTE: Deleting _ANL_SUMMARY (memtype=DATA).
+NOTE: Deleting _ANL_VALIDATION (memtype=DATA).
+NOTE: 4 dataset(s) deleted.
+NOTE: Option TITLE changed to ADTR with Analysis Subset Flags (ANL01FL-ANL04FL).
+NOTE: PROC PRINT data=work.adtr_anl
+
+NOTE: PROC PRINT completed: 7 observations printed, 10 variables
+NOTE: Analysis-flag derivation complete.
